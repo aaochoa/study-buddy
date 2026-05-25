@@ -1,0 +1,250 @@
+/* ================================================================
+   ResearchProgressPanel.module.css
+   ================================================================ */
+
+/* ── Panel shell ─────────────────────────────────────────────── */
+.panel {
+    background: rgba(15, 15, 35, 0.72);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 28px 32px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(99, 102, 241, 0.15) inset;
+    animation: slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.headerIcon {
+    font-size: 2rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.6));
+}
+
+.headerTitle {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: -0.01em;
+}
+
+.headerSubtitle {
+    margin: 3px 0 0;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+
+/* ── Steps list ──────────────────────────────────────────────── */
+.steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.step {
+    position: relative;
+}
+
+/* ── Connector line between steps ───────────────────────────── */
+.connector {
+    position: absolute;
+    top: 0;
+    left: 19px;
+    width: 2px;
+    height: 22px;
+    transform: translateY(-22px);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    transition: background 0.4s ease;
+}
+
+.connectorDone {
+    background: linear-gradient(180deg, #6366f1, #8b5cf6);
+}
+
+/* ── Step inner row ──────────────────────────────────────────── */
+.stepInner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+}
+
+/* ── Circle indicator ────────────────────────────────────────── */
+.circle {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    transition:
+        background 0.3s,
+        box-shadow 0.3s;
+}
+
+/* pending */
+.stepPending .circle {
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    color: #64748b;
+}
+
+/* active */
+.stepActive .circle {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none;
+    box-shadow:
+        0 0 0 4px rgba(99, 102, 241, 0.2),
+        0 4px 16px rgba(99, 102, 241, 0.4);
+}
+
+/* done */
+.stepDone .circle {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
+.checkmark {
+    color: #fff;
+    font-size: 1rem;
+}
+
+.stepNumber {
+    color: #64748b;
+}
+
+/* ── Spinner ─────────────────────────────────────────────────── */
+.spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Step content text ───────────────────────────────────────── */
+.stepContent {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.stepIcon {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.stepLabel {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.2;
+    transition: color 0.3s;
+}
+
+.stepPending .stepLabel {
+    color: #475569;
+}
+
+.stepActive .stepLabel {
+    color: #e2e8f0;
+}
+
+.stepDone .stepLabel {
+    color: #34d399;
+}
+
+.stepDesc {
+    margin: 3px 0 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    transition: color 0.3s;
+}
+
+.stepPending .stepDesc {
+    color: #334155;
+}
+
+.stepActive .stepDesc {
+    color: #94a3b8;
+}
+
+.stepDone .stepDesc {
+    color: #6b7280;
+}
+
+/* ── Research preview box ────────────────────────────────────── */
+.preview {
+    margin-top: 20px;
+    padding: 14px 16px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 10px;
+    animation: fadeIn 0.4s ease both;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.previewLabel {
+    margin: 0 0 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #818cf8;
+}
+
+.previewText {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    color: #94a3b8;
+    font-style: italic;
+}
