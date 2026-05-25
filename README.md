@@ -1,52 +1,103 @@
-# Study Buddy: AI Interview Prep & Study Assistant
+# Study Buddy — AI Interview Prep & Study Guide Generator
 
-Study Buddy is a premium, interactive study guide generator and audio assistant built using **Next.js**, Google's **Agent Development Kit (ADK)**, and **CopilotKit**.
-
-It allows users to research any topic to generate a comprehensive Interview Study Guide, download source files optimized for NotebookLM, and listen to the guide via a fully custom, multilingual text-to-speech player.
+Study Buddy is a full-stack AI research assistant that takes a topic from the user, performs deep web research via Google Search, synthesises the findings into a structured Markdown study guide, and streams the progress back to the browser in real time.
 
 ---
 
-## ✨ Key Features
+## ✨ Features
 
-- **🧠 ADK Research Agent**: Conducts multi-step online searches, synthesizes facts, formats reports, and outputs high-fidelity study materials.
-- **🎙️ Multilingual Audio Reader**: A custom-built, client-side browser speech synthesizer featuring:
-    - **Smart Language Detection**: Automatically analyzes the generated content to detect the language (English, Spanish, French, German, Portuguese, etc.) and sets the appropriate voice engine.
-    - **Visualizer**: High-fidelity soundwave micro-animations that pulse in sync with the audio state.
-    - **Voice & Speed Adjuster**: Allows users to select preferred OS-installed voices and adjust the playback speed (0.5x - 2.0x).
-    - **Markdown Cleaner**: Custom parser that strips Markdown formatting symbols and skips raw code blocks for a clean, natural reading experience.
-- **📥 NotebookLM Export**: Direct download of `notebooklm_source.md`, structured specifically to feed into NotebookLM sources.
-- **🎨 Glassmorphic Dark UI**: Modern dark theme dashboard utilizing fluid layouts, micro-animations, and visual status cards that track the agent's research progress in real time.
-- **🛡️ Quality Assurance**: Pre-commit Git hooks powered by **Husky** that automatically run ESLint and Prettier formatting checks prior to commit execution.
+- **🔍 Deep Web Research** — A Google ADK `researcher` agent searches the web for authoritative sources, engineering blogs, official docs, and curated technical content.
+- **✍️ AI-Edited Study Guide** — An `editor` agent synthesises the raw research into a structured Markdown guide covering core architecture, categorised interview Q&A, common pitfalls, and hands-on coding challenges.
+- **📡 Real-time Streaming** — Research progress streams to the UI over the A2A protocol. The sidebar and progress panel update live as each phase completes.
+- **📊 Animated Progress Tracker** — A 3-step visual tracker (Researching → Editing → Complete) with glassmorphic UI, animated spinners, and a live preview of collected research.
+- **📖 Report Viewer** — Rendered Markdown preview with a raw Markdown toggle, one-click copy, and `.md` file download.
+- **🤖 Chat Sidebar** — CopilotKit sidebar with pre-built topic suggestions for quick research sessions.
+- **🛡️ Pre-commit Hooks** — Husky + lint-staged enforce Prettier formatting on every commit.
 
 ---
 
-## 🛠️ Project Structure
+## 🏗️ Architecture
 
-The project has a modular, focused layout keeping components reusable and small:
+```
+Browser (Next.js 16 / React 19)
+  └── CopilotKit v2 Provider  ──────────────────────────────┐
+        └── CopilotSidebar (chat UI)                        │
+        └── ResearchProgress (state → phase → UI)           │
+              ├── ResearchProgressPanel (step tracker)       │
+              └── ResearchResult (report viewer)             │
+                                                             │ HTTP (Hono/Vercel)
+src/app/api/copilotkit/[[...slug]]/route.ts ◄───────────────┘
+  └── CopilotRuntime (v2)
+        └── A2AAgent (@ag-ui/a2a)
+              └── A2AClient → http://localhost:8000
+                                   │
+                            agent/main.ts  (Node / tsx watch)
+                              └── SequentialAgent: search_assistant
+                                    ├── LlmAgent: researcher
+                                    │     tools: [GOOGLE_SEARCH]
+                                    │     outputKey: search_result
+                                    └── LlmAgent: editor
+                                          outputKey: report_result
+                                          afterCallback: writes .md to agent/
+```
 
-```text
-├── .husky/                 # Husky git commit hook configurations
-├── agent/                  # Python ADK search and writing agent
+### State → UI Phase Mapping
+
+| Agent state             | UI phase                                     |
+| ----------------------- | -------------------------------------------- |
+| `agent.isRunning` only  | `researching` — spinner on step 1            |
+| `search_result` present | `editing` — step 1 done, spinner on step 2   |
+| `report_result` present | `done` — all steps done, report viewer shown |
+| nothing                 | `idle` — component returns `null`            |
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer           | Technology                                                                |
+| --------------- | ------------------------------------------------------------------------- |
+| Frontend        | Next.js 16 (App Router, Turbopack), React 19, TailwindCSS v4              |
+| AI UI bridge    | CopilotKit v2 (`@copilotkit/react-core/v2`)                               |
+| Backend runtime | CopilotKit Runtime v2 (`@copilotkit/runtime/v2`) via Hono + `hono/vercel` |
+| Agent framework | Google ADK (`@google/adk` v1) — TypeScript                                |
+| Agent protocol  | A2A (Agent-to-Agent) via `@a2a-js/sdk` + `@ag-ui/a2a`                     |
+| Package manager | pnpm (workspaces)                                                         |
+
+---
+
+## 📁 Project Structure
+
+```
+study-buddy/
+├── agent/                        # ADK agent server (separate Node process)
+│   ├── main.ts                   # SequentialAgent definition + A2A server startup
+│   ├── utils/
+│   │   ├── prompts.ts            # System prompts for researcher & editor agents
+│   │   └── file-definition.ts   # Generates .md filename from prompt + date
+│   ├── .env                      # Agent secrets (gitignored — never commit)
+│   └── package.json
+│
 ├── src/
 │   ├── app/
-│   │   ├── globals.css     # Global styles and custom keyframe animations
-│   │   ├── layout.tsx      # Main application layout
-│   │   └── page.tsx        # Dashboard page containing the CopilotKit client
+│   │   ├── layout.tsx            # Root layout — mounts <CopilotKit> provider
+│   │   ├── page.tsx              # Main page — sidebar + hero + ResearchProgress
+│   │   ├── globals.css           # Tailwind base styles
+│   │   └── api/copilotkit/[[...slug]]/route.ts   # CopilotKit API bridge
+│   │
 │   ├── components/
-│   │   ├── audio-reader/   # Modular Audio Player Component
-│   │   │   ├── index.tsx            # Main state orchestrator & text cleanser
-│   │   │   ├── audio-controls.tsx   # Play, Pause, and Stop buttons
-│   │   │   ├── audio-visualizer.tsx # Soundwave indicator & state labels
-│   │   │   ├── speed-selector.tsx   # Playback speed dropdown
-│   │   │   └── voice-selector.tsx   # System voice and locale dropdown
-│   │   ├── dashboard-header.tsx     # App title bar and download links
-│   │   ├── markdown-viewer.tsx      # High-performance Markdown renderer
-│   │   ├── status-card.tsx          # Real-time progress tracker card
-│   │   ├── search-loader.tsx        # Search phase loader and agent step logger
-│   │   ├── welcome-state.tsx        # Idle initial welcome UI
-│   │   └── error-state.tsx          # Graceful error screens
+│   │   ├── ResearchProgress.tsx         # Orchestrator: reads agent state → phase
+│   │   ├── ResearchProgressPanel.tsx    # Animated 3-step progress tracker
+│   │   ├── ResearchResult.tsx           # Markdown report viewer + download
+│   │   └── *.module.css                 # CSS Modules (one per component)
+│   │
 │   └── lib/
-│       └── types.ts        # Shared TypeScript interface definitions
+│       └── types.ts              # AgentState, ResearchPhase types
+│
+├── fixtures/                     # Test fixture data
+├── scripts/                      # Dev helper shell scripts
+├── AGENTS.md                     # AI agent coding rules (read before editing)
+├── package.json                  # Root workspace deps
+└── pnpm-workspace.yaml
 ```
 
 ---
@@ -55,60 +106,106 @@ The project has a modular, focused layout keeping components reusable and small:
 
 ### Prerequisites
 
-- **Node.js**: `18.0.0+`
-- **Python**: `3.12+`
-- **Google AI Studio Key**: Required for the Gemini model powering the ADK agent (Get a key at [Google AI Studio](https://aistudio.google.com/)).
+- **Node.js** `18+`
+- **pnpm** — install with `npm install -g pnpm` if you don't have it
+- **Google Gemini API Key** — get one at [Google AI Studio](https://aistudio.google.com/)
 
-### Installation
-
-1. Clone this repository and navigate to the project directory:
-
-    ```bash
-    cd study-buddy
-    ```
-
-2. Install dependencies for both Next.js and the Python agent:
-
-    ```bash
-    npm install
-    ```
-
-    > **Note:** The `postinstall` script runs automatically to initialize a Python virtual environment (`.venv`) and install agent requirements.
-
-3. Export your Google API Key:
-
-    ```bash
-    export GOOGLE_API_KEY="your-gemini-api-key"
-    ```
-
-### Running the Application
-
-Start the local Next.js client and ADK agent server concurrently:
+### 1 — Clone & install
 
 ```bash
-npm run dev
+git clone <repo-url>
+cd study-buddy
+pnpm install        # installs root deps + runs postinstall for agent/
 ```
 
-- **Next.js App**: [http://localhost:3000](http://localhost:3000)
-- **ADK Agent API**: [http://localhost:8000](http://localhost:8000)
+### 2 — Configure environment variables
+
+**`agent/.env`** (agent process):
+
+```env
+GOOGLE_GENAI_API_KEY=your-gemini-api-key
+GOOGLE_GENAI_MODEL=gemini-2.0-flash
+PORT=8000
+```
+
+**`.env.local`** (Next.js process, at repo root):
+
+```env
+AGENT_URL=http://localhost:8000
+COPILOTKIT_TELEMETRY_DISABLED=true   # optional
+```
+
+### 3 — Run the dev stack
+
+```bash
+pnpm dev   # or: pn dev
+```
+
+This starts both processes concurrently:
+
+| Process       | URL                                            |
+| ------------- | ---------------------------------------------- |
+| Next.js UI    | [http://localhost:3000](http://localhost:3000) |
+| ADK A2A Agent | [http://localhost:8000](http://localhost:8000) |
+
+The agent reloads automatically on file changes via `tsx watch`.
 
 ---
 
 ## 💻 Available Scripts
 
-- `dev` – Runs the UI and ADK Agent concurrently.
-- `dev:debug` – Runs the dev stack with detailed debug levels.
-- `dev:ui` – Starts only the Next.js development server.
-- `dev:agent` – Starts only the Python agent FastAPI backend.
-- `build` – Compiles Next.js for production.
-- `lint` – Runs ESLint across the codebase.
-- `format` – Re-formats all files using Prettier.
+| Command           | Description                       |
+| ----------------- | --------------------------------- |
+| `pn dev`          | Start UI + agent concurrently     |
+| `pn dev:ui`       | Start Next.js UI only             |
+| `pn dev:agent`    | Start ADK agent only              |
+| `pn dev:debug`    | Full stack with `LOG_LEVEL=debug` |
+| `pn build`        | Production Next.js build          |
+| `pn format`       | Prettier format all files         |
+| `pn format:check` | Check formatting (CI)             |
+| `pn test`         | Run Jest unit tests               |
 
 ---
 
-## 📈 Quality & Code Style Checks
+## 🎨 UI Components
 
-This project enforces strict code styling and linting on every commit:
+### `ResearchProgress`
 
-- **Husky pre-commit hook** runs `npm run lint` on staged files.
-- If there are syntax errors, missing accessibility headers (`jsx-a11y`), or format issues, the commit is blocked until addressed.
+Invisible orchestrator component. Reads `useAgent({ agentId: 'study_buddy_agent' })` and renders nothing when the agent is idle. Automatically appears the moment a research session starts.
+
+### `ResearchProgressPanel`
+
+Glassmorphic step tracker card with:
+
+- Gradient circle indicators (pending / active spinner / done ✓)
+- Connecting lines that fill as steps complete
+- Live preview of raw `search_result` text while the editor is running
+
+### `ResearchResult`
+
+Full-featured report viewer with:
+
+- Rendered Markdown view (custom parser — no external markdown dependency)
+- Raw Markdown toggle for copy-paste into other tools
+- Copy to clipboard + `.md` file download
+- Word & character count
+- Shortcut link to [NotebookLM](https://notebooklm.google.com) for audio learning
+
+---
+
+## 🔍 How a Research Session Works
+
+1. User types a topic in the **CopilotKit sidebar** (e.g. _"Research React Server Components"_)
+2. The `researcher` agent performs multiple Google searches, aggregating raw data into `search_result`
+3. The `editor` agent reads `search_result` and produces a structured Markdown guide stored in `report_result`
+4. The agent also writes a local `.md` file to the `agent/` directory (filename auto-generated from the topic + date)
+5. The `ResearchProgress` component detects state changes and transitions through the phases automatically
+
+---
+
+## 📈 Code Quality
+
+- **Husky pre-commit hook** runs `pnpm format:check` on staged files via lint-staged
+- **TypeScript strict mode** — no `any`, no suppressed errors in application code
+- **CSS Modules** — all component styles are scoped; no ad-hoc Tailwind utilities inside component files
+- **Named exports only** — no default exports from component files
