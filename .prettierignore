@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# System / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Lock files and databases
+pnpm-lock.yaml
+package-lock.json
+*.db
+*.sqlite
+*.sqlite3
+
+# Public assets
+public/
