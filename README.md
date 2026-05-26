@@ -128,8 +128,9 @@ pnpm install        # installs root deps + runs postinstall for agent/
 **`agent/.env`** (agent process):
 
 ```env
+RESEARCH_MODEL=gemini-openrouter/free,google/gemini-2.5-flash,openai/gpt-4o-mini,deepseek/deepseek-chat
 OPENROUTER_API_KEY=your-openrouter-api-key
-GOOGLE_GENAI_MODEL=google/gemini-2.0-flash
+OPENROUTER_URL=https://openrouter.ai
 PORT=8000
 ```
 
