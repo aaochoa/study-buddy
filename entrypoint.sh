@@ -8,10 +8,10 @@ echo "[entrypoint] PORT=${PORT:-not set}"
 echo "========================================="
 
 # Check critical env vars
-if [ -z "$GOOGLE_GENAI_API_KEY" ]; then
-  echo "[entrypoint] WARNING: GOOGLE_GENAI_API_KEY is not set! Agent will fail."
+if [ -z "$OPENROUTER_API_KEY" ]; then
+  echo "[entrypoint] WARNING: OPENROUTER_API_KEY is not set! Agent will fail."
 else
-  echo "[entrypoint] GOOGLE_GENAI_API_KEY: set (${#GOOGLE_GENAI_API_KEY} chars)"
+  echo "[entrypoint] OPENROUTER_API_KEY: set (${#OPENROUTER_API_KEY} chars)"
 fi
 
 # Start TypeScript ADK agent on port 8000
