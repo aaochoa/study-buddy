@@ -113,7 +113,7 @@ study-buddy/
 
 - **Node.js** `18+`
 - **pnpm** — install with `npm install -g pnpm` if you don't have it
-- **Google Gemini API Key** — get one at [Google AI Studio](https://aistudio.google.com/)
+- **OpenRouter API Key** — get one at [OpenRouter](https://openrouter.ai/)
 
 ### 1 — Clone & install
 
@@ -128,8 +128,8 @@ pnpm install        # installs root deps + runs postinstall for agent/
 **`agent/.env`** (agent process):
 
 ```env
-GOOGLE_GENAI_API_KEY=your-gemini-api-key
-GOOGLE_GENAI_MODEL=gemini-2.0-flash
+OPENROUTER_API_KEY=your-openrouter-api-key
+GOOGLE_GENAI_MODEL=google/gemini-2.0-flash
 PORT=8000
 ```
 
