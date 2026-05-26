@@ -13,7 +13,8 @@
         "postinstall": "npm run install:agent",
         "prepare": "husky",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "test": "jest"
     },
     "dependencies": {
         "@a2a-js/sdk": "^0.2.2",
