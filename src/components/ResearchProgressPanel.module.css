@@ -248,3 +248,31 @@
     color: #94a3b8;
     font-style: italic;
 }
+
+/* ── Active Query (inside step Content) ─────────────────────── */
+.activeQueryContainer {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    animation: fadeIn 0.3s ease both;
+}
+
+.activeQueryLabel {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #818cf8;
+}
+
+.activeQueryText {
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    line-height: 1.3;
+}

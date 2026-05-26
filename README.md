@@ -6,8 +6,8 @@ Study Buddy is a full-stack AI research assistant that takes a topic from the us
 
 ## ✨ Features
 
-- **🔍 Deep Web Research** — A Google ADK `researcher` agent searches the web for authoritative sources, engineering blogs, official docs, and curated technical content.
-- **✍️ AI-Edited Study Guide** — An `editor` agent synthesises the raw research into a structured Markdown guide covering core architecture, categorised interview Q&A, common pitfalls, and hands-on coding challenges.
+- **🔍 Deep Web Research** — Concurrent Google ADK research agents search the web in parallel for authoritative sources, engineering blogs, official docs, and curated technical content.
+- **✍️ AI-Edited Study Guide** — An `editor` agent synthesises the raw parallel research into a structured Markdown guide covering core architecture, categorised interview Q&A, common pitfalls, and hands-on coding challenges.
 - **📡 Real-time Streaming** — Research progress streams to the UI over the A2A protocol. The sidebar and progress panel update live as each phase completes.
 - **📊 Animated Progress Tracker** — A 3-step visual tracker (Researching → Editing → Complete) with glassmorphic UI, animated spinners, and a live preview of collected research.
 - **📖 Report Viewer** — Rendered Markdown preview with a raw Markdown toggle, one-click copy, and `.md` file download.
@@ -33,22 +33,24 @@ src/app/api/copilotkit/[[...slug]]/route.ts ◄───────────
                                    │
                             agent/main.ts  (Node / tsx watch)
                               └── SequentialAgent: search_assistant
-                                    ├── LlmAgent: researcher
-                                    │     tools: [GOOGLE_SEARCH]
-                                    │     outputKey: search_result
+                                    ├── ParallelAgent: researcher
+                                    │     ├── LlmAgent: architecture_researcher
+                                    │     ├── LlmAgent: questions_researcher
+                                    │     ├── LlmAgent: pitfalls_researcher
+                                    │     └── LlmAgent: challenges_researcher
                                     └── LlmAgent: editor
                                           outputKey: report_result
-                                          afterCallback: writes .md to agent/
+                                          afterCallback: writes .md to research/
 ```
 
 ### State → UI Phase Mapping
 
-| Agent state             | UI phase                                     |
-| ----------------------- | -------------------------------------------- |
-| `agent.isRunning` only  | `researching` — spinner on step 1            |
-| `search_result` present | `editing` — step 1 done, spinner on step 2   |
-| `report_result` present | `done` — all steps done, report viewer shown |
-| nothing                 | `idle` — component returns `null`            |
+| Agent state              | UI phase                                     |
+| ------------------------ | -------------------------------------------- |
+| `agent.isRunning` only   | `researching` — spinner on step 1            |
+| parallel results present | `editing` — step 1 done, spinner on step 2   |
+| `report_result` present  | `done` — all steps done, report viewer shown |
+| nothing                  | `idle` — component returns `null`            |
 
 ---
 
@@ -77,6 +79,8 @@ study-buddy/
 │   ├── .env                      # Agent secrets (gitignored — never commit)
 │   └── package.json
 │
+├── research/                     # Generated markdown study guides (gitignored)
+│
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx            # Root layout — mounts <CopilotKit> provider
@@ -87,6 +91,7 @@ study-buddy/
 │   ├── components/
 │   │   ├── ResearchProgress.tsx         # Orchestrator: reads agent state → phase
 │   │   ├── ResearchProgressPanel.tsx    # Animated 3-step progress tracker
+│   │   ├── ResearchStepItem.tsx         # Single timeline step rendering
 │   │   ├── ResearchResult.tsx           # Markdown report viewer + download
 │   │   └── *.module.css                 # CSS Modules (one per component)
 │   │
@@ -175,11 +180,12 @@ Invisible orchestrator component. Reads `useAgent({ agentId: 'study_buddy_agent'
 
 ### `ResearchProgressPanel`
 
-Glassmorphic step tracker card with:
+Glassmorphic step tracker card that maps the timeline steps via individual `<ResearchStepItem />` subcomponents:
 
 - Gradient circle indicators (pending / active spinner / done ✓)
 - Connecting lines that fill as steps complete
-- Live preview of raw `search_result` text while the editor is running
+- Live preview of combined parallel research text while the editor is running
+- Active Google Search details during the research phase
 
 ### `ResearchResult`
 
@@ -189,16 +195,15 @@ Full-featured report viewer with:
 - Raw Markdown toggle for copy-paste into other tools
 - Copy to clipboard + `.md` file download
 - Word & character count
-- Shortcut link to [NotebookLM](https://notebooklm.google.com) for audio learning
 
 ---
 
 ## 🔍 How a Research Session Works
 
 1. User types a topic in the **CopilotKit sidebar** (e.g. _"Research React Server Components"_)
-2. The `researcher` agent performs multiple Google searches, aggregating raw data into `search_result`
-3. The `editor` agent reads `search_result` and produces a structured Markdown guide stored in `report_result`
-4. The agent also writes a local `.md` file to the `agent/` directory (filename auto-generated from the topic + date)
+2. The `researcher` parallel agents concurrently perform Google searches, aggregating raw data into domain-specific outputs
+3. The `editor` agent reads these outputs and produces a structured Markdown guide stored in `report_result`
+4. The agent also writes a local `.md` file to the root `research/` directory (filename auto-generated from the topic + date)
 5. The `ResearchProgress` component detects state changes and transitions through the phases automatically
 
 ---

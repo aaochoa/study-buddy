@@ -61,6 +61,7 @@ Desktop.ini
 
 # Agent-generated study guide reports (written locally by the editor agent)
 agent/*.md
+research/*.md
 
 # Test coverage output
 coverage/
@@ -72,3 +73,7 @@ coverage/
 
 # pnpm store (if local)
 .pnpm-store/
+
+# Agent
+.antigravitycli
+*.DS
