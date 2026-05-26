@@ -189,7 +189,6 @@ Full-featured report viewer with:
 - Raw Markdown toggle for copy-paste into other tools
 - Copy to clipboard + `.md` file download
 - Word & character count
-- Shortcut link to [NotebookLM](https://notebooklm.google.com) for audio learning
 
 ---
 

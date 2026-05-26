@@ -2,14 +2,8 @@
 
 import React from 'react';
 import { ResearchPhase } from '@/lib/types';
+import { ResearchStepItem, Step } from './ResearchStepItem';
 import styles from './ResearchProgressPanel.module.css';
-
-interface Step {
-    id: ResearchPhase;
-    label: string;
-    description: string;
-    icon: string;
-}
 
 const STEPS: Step[] = [
     {
@@ -43,10 +37,32 @@ const phaseOrder: Record<ResearchPhase, number> = {
 interface ResearchProgressPanelProps {
     phase: ResearchPhase;
     searchResult?: string;
+    messages?: any[];
 }
 
-export function ResearchProgressPanel({ phase, searchResult }: ResearchProgressPanelProps) {
+function getCurrentSearchQuery(messages?: any[]): string | null {
+    if (!messages) return null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i];
+        if (msg.parts) {
+            for (const part of msg.parts) {
+                if (part.functionCall && part.functionCall.name === 'GOOGLE_SEARCH') {
+                    const query = part.functionCall.args?.query;
+                    if (query) return query;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+export function ResearchProgressPanel({
+    phase,
+    searchResult,
+    messages,
+}: ResearchProgressPanelProps) {
     const currentOrder = phaseOrder[phase];
+    const activeQuery = getCurrentSearchQuery(messages);
 
     return (
         <div className={styles.panel}>
@@ -70,47 +86,15 @@ export function ResearchProgressPanel({ phase, searchResult }: ResearchProgressP
                     const isPending = currentOrder < stepOrder;
 
                     return (
-                        <div
+                        <ResearchStepItem
                             key={step.id}
-                            className={[
-                                styles.step,
-                                isActive ? styles.stepActive : '',
-                                isDone ? styles.stepDone : '',
-                                isPending ? styles.stepPending : '',
-                            ].join(' ')}
-                        >
-                            {/* Connector line above (not for first) */}
-                            {idx > 0 && (
-                                <div
-                                    className={[
-                                        styles.connector,
-                                        isDone ? styles.connectorDone : '',
-                                    ].join(' ')}
-                                />
-                            )}
-
-                            <div className={styles.stepInner}>
-                                {/* Step circle */}
-                                <div className={styles.circle}>
-                                    {isDone ? (
-                                        <span className={styles.checkmark}>✓</span>
-                                    ) : isActive ? (
-                                        <span className={styles.spinner} aria-hidden />
-                                    ) : (
-                                        <span className={styles.stepNumber}>{idx + 1}</span>
-                                    )}
-                                </div>
-
-                                {/* Step text */}
-                                <div className={styles.stepContent}>
-                                    <span className={styles.stepIcon}>{step.icon}</span>
-                                    <div>
-                                        <p className={styles.stepLabel}>{step.label}</p>
-                                        <p className={styles.stepDesc}>{step.description}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            step={step}
+                            idx={idx}
+                            isActive={isActive}
+                            isDone={isDone}
+                            isPending={isPending}
+                            activeQuery={activeQuery}
+                        />
                     );
                 })}
             </div>

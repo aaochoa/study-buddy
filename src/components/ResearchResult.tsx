@@ -195,16 +195,7 @@ export function ResearchResult({ report }: ResearchResultProps) {
             {/* ── Footer tip ──────────────────────────────── */}
             <div className={styles.footer}>
                 <span className={styles.footerTip}>
-                    💡 Paste this guide into{' '}
-                    <a
-                        href="https://notebooklm.google.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={styles.footerLink}
-                    >
-                        NotebookLM
-                    </a>{' '}
-                    to start your learning session.
+                    💡 Document ready. You can start your learning session now.
                 </span>
             </div>
         </div>
