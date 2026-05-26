@@ -4,7 +4,7 @@ import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 export default [
     // 1. Global Ignores
     {
-        ignores: ['.next/**', 'out/**', 'build/**', 'node_modules/**', 'agent/**', 'next-env.d.ts'],
+        ignores: ['.next/**', 'out/**', 'build/**', 'node_modules/**', 'agent/**', 'next-env.d.ts', 'commitlint.config.js'],
     },
 
     // 2. Load the plugin configuration objects

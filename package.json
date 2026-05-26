@@ -13,7 +13,8 @@
         "postinstall": "npm run install:agent",
         "prepare": "husky",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "test": "jest"
     },
     "dependencies": {
         "@a2a-js/sdk": "^0.2.2",
@@ -31,6 +32,8 @@
         "zod": "^4.4.3"
     },
     "devDependencies": {
+        "@commitlint/cli": "^21.0.1",
+        "@commitlint/config-conventional": "^21.0.1",
         "@eslint/eslintrc": "^3.3.5",
         "@tailwindcss/postcss": "^4",
         "@testing-library/dom": "^10.4.1",
