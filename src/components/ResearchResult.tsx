@@ -5,6 +5,7 @@ import styles from './ResearchResult.module.css';
 
 interface ResearchResultProps {
     report: string;
+    onClose?: () => void;
 }
 
 /** Minimal markdown → HTML conversion for headers, bold, inline code, lists */
@@ -59,7 +60,7 @@ function markdownToHtml(md: string): string {
     return html;
 }
 
-export function ResearchResult({ report }: ResearchResultProps) {
+export function ResearchResult({ report, onClose }: ResearchResultProps) {
     const [copied, setCopied] = useState(false);
     const [view, setView] = useState<'rendered' | 'raw'>('rendered');
 
@@ -178,6 +179,32 @@ export function ResearchResult({ report }: ResearchResultProps) {
                             <line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
                     </button>
+
+                    {/* Close */}
+                    {onClose && (
+                        <button
+                            id="close-report"
+                            type="button"
+                            aria-label="Close report"
+                            className={styles.iconBtn}
+                            onClick={onClose}
+                            title="Close guide"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    )}
                 </div>
             </div>
 

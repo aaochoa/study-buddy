@@ -5,6 +5,7 @@
     "main": "main.ts",
     "scripts": {
         "dev": "NODE_OPTIONS='--no-deprecation' tsx watch main.ts",
+        "dev:qa": "NODE_OPTIONS='--no-deprecation' tsx watch qa-main.ts",
         "test": "NODE_OPTIONS='--no-deprecation' NODE_ENV=test tsx tests/test.ts"
     },
     "dependencies": {

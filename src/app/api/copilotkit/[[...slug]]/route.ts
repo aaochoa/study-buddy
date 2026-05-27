@@ -8,10 +8,18 @@ const a2aClient = new A2AClient(
     '.well-known/agent-card.json',
 );
 
+const qaA2aClient = new A2AClient(
+    (process.env.QA_AGENT_URL || 'http://localhost:8001').replace(/\/$/, ''),
+    '.well-known/agent-card.json',
+);
+
 const runtime = new CopilotRuntime({
     agents: {
         study_buddy_agent: new A2AAgent({
             a2aClient,
+        }),
+        study_buddy_qa: new A2AAgent({
+            a2aClient: qaA2aClient,
         }),
     },
     runner: new InMemoryAgentRunner(),
