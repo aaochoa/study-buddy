@@ -129,10 +129,16 @@ pnpm install        # installs root deps + runs postinstall for agent/
 
 ```env
 RESEARCH_MODEL=gemini-openrouter/free,google/gemini-2.5-flash,openai/gpt-4o-mini,deepseek/deepseek-chat
+QA_MODEL=qwen/qwen3-coder:free
 OPENROUTER_API_KEY=your-openrouter-api-key
 OPENROUTER_URL=https://openrouter.ai
 PORT=8000
 ```
+
+> [!NOTE]
+>
+> - **Research Agent (`RESEARCH_MODEL`)**: The first model in this list must start with `gemini-` (such as `gemini-openrouter/free` or `google/gemini-2.5-flash`) because the parallel research agents require the `GOOGLE_SEARCH` tool, which is only supported by Google Gemini models in the ADK framework.
+> - **Q&A Agent (`QA_MODEL`)**: Since the Q&A agent does not use any tools, it has no model limitations. You can use any free or specialized model from OpenRouter (e.g. `qwen/qwen3-coder:free` or `google/gemma-4-31b-it:free`) for fast and free chat.
 
 **`.env.local`** (Next.js process, at repo root):
 
