@@ -11,6 +11,9 @@ dotenv.config();
 LLMRegistry.register(OpenRouterLlm);
 
 const getModel = () => {
+    if (process.env.QA_MODEL) {
+        return process.env.QA_MODEL.trim();
+    }
     if (process.env.RESEARCH_MODEL) {
         const models = process.env.RESEARCH_MODEL.split(',');
         return models[0].trim();
@@ -86,8 +89,8 @@ const qaAgent = new LlmAgent({
     },
 });
 
-const port = process.env.QA_PORT || 8001;
-toA2a(qaAgent).then((app) => {
+const port = Number(process.env.QA_PORT || 8001);
+toA2a(qaAgent, { port }).then((app) => {
     app.listen(port, () => {
         console.log(`QA Agent server listening on port ${port}`);
     });
