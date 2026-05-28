@@ -33,6 +33,10 @@ RUN pnpm build
 
 # ─── Runner stage ─────────────────────────────────────────────────────────────
 FROM base AS runner
+
+# Install interpreters for the coding challenges execution API
+RUN apk add --no-cache python3 ruby clang
+
 WORKDIR /app
 
 ENV NODE_ENV=production

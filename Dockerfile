@@ -31,6 +31,13 @@ RUN pnpm install --frozen-lockfile --prod
 # Stage 3: Production image — Node only
 FROM node:20-slim AS runner
 
+# Install interpreters for the coding challenges execution API
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    ruby \
+    clang \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN npm install -g pnpm tsx
 
 WORKDIR /app
