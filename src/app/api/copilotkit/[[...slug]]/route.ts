@@ -2,8 +2,9 @@ import { CopilotRuntime, createCopilotEndpoint, InMemoryAgentRunner } from '@cop
 import { A2AAgent, A2AAgentConfig } from '@ag-ui/a2a';
 import { A2AClient } from '@a2a-js/sdk/client';
 import { handle } from 'hono/vercel';
-import { BaseEvent, EventType } from '@ag-ui/client';
+import { BaseEvent, EventType, RunAgentInput } from '@ag-ui/client';
 import { Observable, Subscriber } from 'rxjs';
+import type { TaskArtifactUpdateEvent, Part, TextPart } from '@a2a-js/sdk';
 
 class TextMessageA2AAgent extends A2AAgent {
     constructor(config: A2AAgentConfig) {
@@ -17,22 +18,25 @@ class TextMessageA2AAgent extends A2AAgent {
         } as A2AAgentConfig);
     }
 
-    override run(input: any): Observable<BaseEvent> {
+    override run(input: RunAgentInput): Observable<BaseEvent> {
         return new Observable<BaseEvent>((subscriber: Subscriber<BaseEvent>) => {
             const super$ = super.run(input);
             const subscription = super$.subscribe({
                 next: (event) => {
-                    const rawEvent = event.event || event.rawEvent;
+                    const rawEvent =
+                        (event as { event?: TaskArtifactUpdateEvent }).event || event.rawEvent;
                     if (
                         event.type === EventType.RAW &&
                         rawEvent?.kind === 'artifact-update' &&
                         rawEvent?.append !== false
                     ) {
                         const artifactParts = rawEvent.artifact?.parts || [];
-                        const textParts = artifactParts.filter((p: any) => p.kind === 'text');
+                        const textParts = artifactParts.filter((p: Part) => p.kind === 'text');
 
                         if (textParts.length > 0) {
-                            const deltaText = textParts.map((p: any) => p.text || '').join('');
+                            const deltaText = textParts
+                                .map((p: Part) => (p as TextPart).text || '')
+                                .join('');
                             if (deltaText) {
                                 const messageId = rawEvent.artifact.artifactId || 'default-msg';
                                 subscriber.next({
@@ -41,7 +45,7 @@ class TextMessageA2AAgent extends A2AAgent {
                                     role: 'assistant',
                                     delta: deltaText,
                                     timestamp: Date.now(),
-                                } as any);
+                                } as BaseEvent);
                             }
                         }
                     }
