@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { CopilotWrapper } from '@/components/CopilotWrapper';
+import { Navbar } from '@/components/Navbar';
 import './globals.css';
 import '@copilotkit/react-core/v2/styles.css';
 
@@ -17,7 +18,10 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className="antialiased">
-                <CopilotWrapper>{children}</CopilotWrapper>
+                <CopilotWrapper>
+                    <Navbar />
+                    <div className="pt-16">{children}</div>
+                </CopilotWrapper>
             </body>
         </html>
     );

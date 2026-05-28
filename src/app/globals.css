@@ -1,24 +1,165 @@
 @import 'tailwindcss';
 
-:root {
-    --background: #ffffff;
-    --foreground: #171717;
-}
+/* ================================================================
+   Design Token System — Light & Dark Theme
+   Wrapped in @layer base so Tailwind v4 properly cascades them.
+   ================================================================ */
 
-@media (prefers-color-scheme: dark) {
+@layer base {
+    /* ── Light Theme (default) ──────────────────────────────────── */
     :root {
+        --background: #f8fafc;
+        --foreground: #1e293b;
+
+        /* Page gradients */
+        --bg-gradient-from: #eef2ff;
+        --bg-gradient-via: #e0e7ff;
+        --bg-gradient-to: #eef2ff;
+
+        /* Panels / glassmorphic containers */
+        --bg-panel: rgba(255, 255, 255, 0.82);
+        --bg-panel-header: rgba(99, 102, 241, 0.05);
+        --bg-panel-alt: rgba(241, 245, 249, 0.8);
+
+        /* Borders */
+        --border-color: rgba(99, 102, 241, 0.12);
+        --border-subtle: rgba(99, 102, 241, 0.08);
+        --border-accent: rgba(99, 102, 241, 0.18);
+
+        /* Text colors */
+        --text-primary: #1e293b;
+        --text-secondary: #475569;
+        --text-muted: #94a3b8;
+        --text-heading: #0f172a;
+
+        /* Navbar */
+        --nav-bg: rgba(255, 255, 255, 0.75);
+        --nav-shadow: rgba(99, 102, 241, 0.08);
+        --tab-color: #64748b;
+        --tab-hover-color: #1e293b;
+        --tab-hover-bg: rgba(99, 102, 241, 0.06);
+        --tabs-bg: rgba(241, 245, 249, 0.9);
+
+        /* Items (list cards, saved guides) */
+        --bg-item: rgba(241, 245, 249, 0.6);
+        --bg-item-hover: rgba(224, 231, 255, 0.5);
+        --item-border: rgba(99, 102, 241, 0.08);
+
+        /* Code Arena */
+        --bg-editor: #f1f5f9;
+        --bg-terminal: #f8fafc;
+        --text-code: #334155;
+
+        /* Selectors / Inputs */
+        --bg-select: rgba(241, 245, 249, 0.9);
+        --bg-select-hover: rgba(224, 231, 255, 0.8);
+        --select-border: rgba(99, 102, 241, 0.2);
+
+        /* Code blocks */
+        --bg-code-inline: rgba(99, 102, 241, 0.08);
+        --border-code-inline: rgba(99, 102, 241, 0.15);
+        --text-code-inline: #4338ca;
+        --bg-code-block: rgba(241, 245, 249, 0.8);
+        --border-code-block: rgba(99, 102, 241, 0.1);
+        --text-code-block: #475569;
+
+        /* Mode switcher on research page */
+        --bg-mode-switcher: rgba(241, 245, 249, 0.9);
+
+        /* Misc */
+        --bg-scrollbar-thumb: rgba(99, 102, 241, 0.15);
+        --bg-icon-btn: rgba(99, 102, 241, 0.06);
+        --bg-icon-btn-hover: rgba(99, 102, 241, 0.12);
+        --icon-btn-border: rgba(99, 102, 241, 0.12);
+
+        /* Footer */
+        --bg-footer: rgba(241, 245, 249, 0.5);
+        --border-footer: rgba(99, 102, 241, 0.08);
+    }
+
+    /* ── Dark Theme ─────────────────────────────────────────────── */
+    .dark {
         --background: #0a0a0a;
         --foreground: #ededed;
+
+        /* Page gradients */
+        --bg-gradient-from: #0f0f23;
+        --bg-gradient-via: #1a1a3e;
+        --bg-gradient-to: #0f0f23;
+
+        /* Panels */
+        --bg-panel: rgba(15, 15, 35, 0.7);
+        --bg-panel-header: rgba(99, 102, 241, 0.06);
+        --bg-panel-alt: rgba(26, 26, 62, 0.45);
+
+        /* Borders */
+        --border-color: rgba(255, 255, 255, 0.08);
+        --border-subtle: rgba(255, 255, 255, 0.05);
+        --border-accent: rgba(139, 92, 246, 0.12);
+
+        /* Text */
+        --text-primary: #e2e8f0;
+        --text-secondary: #94a3b8;
+        --text-muted: #64748b;
+        --text-heading: #f1f5f9;
+
+        /* Navbar */
+        --nav-bg: rgba(15, 15, 35, 0.45);
+        --nav-shadow: rgba(0, 0, 0, 0.3);
+        --tab-color: #94a3b8;
+        --tab-hover-color: #f1f5f9;
+        --tab-hover-bg: rgba(255, 255, 255, 0.03);
+        --tabs-bg: rgba(0, 0, 0, 0.2);
+
+        /* Items */
+        --bg-item: rgba(255, 255, 255, 0.02);
+        --bg-item-hover: rgba(255, 255, 255, 0.06);
+        --item-border: rgba(255, 255, 255, 0.03);
+
+        /* Code Arena */
+        --bg-editor: #090915;
+        --bg-terminal: #070710;
+        --text-code: #cbd5e1;
+
+        /* Selectors */
+        --bg-select: rgba(15, 15, 30, 0.8);
+        --bg-select-hover: rgba(15, 15, 30, 0.95);
+        --select-border: rgba(139, 92, 246, 0.2);
+
+        /* Code blocks */
+        --bg-code-inline: rgba(99, 102, 241, 0.14);
+        --border-code-inline: rgba(99, 102, 241, 0.25);
+        --text-code-inline: #a5b4fc;
+        --bg-code-block: rgba(0, 0, 0, 0.45);
+        --border-code-block: rgba(255, 255, 255, 0.07);
+        --text-code-block: #94a3b8;
+
+        /* Mode switcher */
+        --bg-mode-switcher: rgba(22, 22, 51, 0.8);
+
+        /* Misc */
+        --bg-scrollbar-thumb: rgba(99, 102, 241, 0.2);
+        --bg-icon-btn: rgba(255, 255, 255, 0.04);
+        --bg-icon-btn-hover: rgba(255, 255, 255, 0.1);
+        --icon-btn-border: rgba(255, 255, 255, 0.1);
+
+        /* Footer */
+        --bg-footer: rgba(0, 0, 0, 0.2);
+        --border-footer: rgba(255, 255, 255, 0.05);
     }
-}
 
-body {
-    background: var(--background);
-    color: var(--foreground);
-    font-family: Arial, Helvetica, sans-serif;
-}
+    /* ── Base element styles ────────────────────────────────────── */
+    body {
+        background: var(--background);
+        color: var(--foreground);
+        font-family: Arial, Helvetica, sans-serif;
+        transition:
+            background-color 0.3s ease,
+            color 0.3s ease;
+    }
 
-body,
-html {
-    height: 100%;
+    body,
+    html {
+        height: 100%;
+    }
 }

@@ -4,10 +4,10 @@
 
 /* ── Outer wrapper ───────────────────────────────────────────── */
 .wrapper {
-    background: rgba(15, 15, 35, 0.78);
+    background: var(--bg-panel);
     backdrop-filter: blur(24px) saturate(160%);
     -webkit-backdrop-filter: blur(24px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
     border-radius: 20px;
     overflow: hidden;
     width: 100%;
@@ -16,6 +16,9 @@
         0 12px 60px rgba(0, 0, 0, 0.55),
         0 0 0 1px rgba(139, 92, 246, 0.15) inset;
     animation: revealUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
 }
 
 @keyframes revealUp {
@@ -37,8 +40,11 @@
     flex-wrap: wrap;
     gap: 10px;
     padding: 16px 24px;
-    background: rgba(99, 102, 241, 0.08);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    background: var(--bg-panel-header);
+    border-bottom: 1px solid var(--border-color);
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
 }
 
 .headerLeft {
@@ -65,7 +71,8 @@
 
 .meta {
     font-size: 0.73rem;
-    color: #64748b;
+    color: var(--text-muted);
+    transition: color 0.3s ease;
 }
 
 .headerActions {
@@ -77,10 +84,13 @@
 /* ── View toggle ─────────────────────────────────────────────── */
 .toggle {
     display: flex;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-icon-btn);
+    border: 1px solid var(--icon-btn-border);
     border-radius: 8px;
     overflow: hidden;
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
 }
 
 .toggleBtn {
@@ -89,7 +99,7 @@
     font-weight: 600;
     border: none;
     background: transparent;
-    color: #64748b;
+    color: var(--text-muted);
     cursor: pointer;
     transition:
         background 0.2s,
@@ -97,7 +107,7 @@
 }
 
 .toggleBtn:hover {
-    color: #e2e8f0;
+    color: var(--text-primary);
 }
 
 .toggleActive {
@@ -110,9 +120,9 @@
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.04);
-    color: #94a3b8;
+    border: 1px solid var(--icon-btn-border);
+    background: var(--bg-icon-btn);
+    color: var(--text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -124,9 +134,9 @@
 }
 
 .iconBtn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e2e8f0;
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--bg-icon-btn-hover);
+    color: var(--text-primary);
+    border-color: var(--border-accent);
 }
 
 .copiedIcon {
@@ -140,10 +150,11 @@
     padding: 32px 36px;
     max-height: 70vh;
     overflow-y: auto;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     line-height: 1.75;
     scroll-behavior: smooth;
+    transition: color 0.3s ease;
 }
 
 .content::-webkit-scrollbar {
@@ -155,7 +166,7 @@
 }
 
 .content::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.3);
+    background: var(--bg-scrollbar-thumb);
     border-radius: 3px;
 }
 
@@ -163,7 +174,7 @@
 .content :global(h1) {
     font-size: 1.6rem;
     font-weight: 800;
-    color: #f1f5f9;
+    color: var(--text-heading);
     margin: 0 0 8px;
     letter-spacing: -0.02em;
     background: linear-gradient(135deg, #a5b4fc, #818cf8);
@@ -175,23 +186,25 @@
 .content :global(h2) {
     font-size: 1.15rem;
     font-weight: 700;
-    color: #e2e8f0;
+    color: var(--text-primary);
     margin: 28px 0 10px;
     padding-bottom: 8px;
     border-bottom: 1px solid rgba(99, 102, 241, 0.25);
+    transition: color 0.3s ease;
 }
 
 .content :global(h3) {
     font-size: 1rem;
     font-weight: 600;
-    color: #c7d2fe;
+    color: var(--text-code-inline);
     margin: 20px 0 8px;
+    transition: color 0.3s ease;
 }
 
 .content :global(h4) {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #a5b4fc;
+    color: var(--text-code-inline);
     margin: 16px 0 6px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -206,29 +219,32 @@
 
 /* Code */
 .content :global(code) {
-    background: rgba(99, 102, 241, 0.14);
-    border: 1px solid rgba(99, 102, 241, 0.25);
+    background: var(--bg-code-inline);
+    border: 1px solid var(--border-code-inline);
     border-radius: 5px;
     padding: 2px 6px;
     font-size: 0.83em;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    color: #a5b4fc;
+    color: var(--text-code-inline);
 }
 
 .content :global(pre) {
-    background: rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: var(--bg-code-block);
+    border: 1px solid var(--border-code-block);
     border-radius: 10px;
     padding: 16px 20px;
     overflow-x: auto;
     margin: 12px 0;
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
 }
 
 .content :global(pre code) {
     background: none;
     border: none;
     padding: 0;
-    color: #94a3b8;
+    color: var(--text-code-block);
     font-size: 0.85em;
 }
 
@@ -243,7 +259,8 @@
     position: relative;
     padding-left: 16px;
     margin-bottom: 6px;
-    color: #94a3b8;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
 }
 
 .content :global(li::before) {
@@ -256,19 +273,19 @@
 
 /* Bold / italic */
 .content :global(strong) {
-    color: #e2e8f0;
+    color: var(--text-primary);
     font-weight: 700;
 }
 
 .content :global(em) {
-    color: #a5b4fc;
+    color: var(--text-code-inline);
     font-style: italic;
 }
 
 /* Horizontal rule */
 .content :global(hr) {
     border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--border-color);
     margin: 24px 0;
 }
 
@@ -281,9 +298,10 @@
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.82rem;
     line-height: 1.7;
-    color: #64748b;
+    color: var(--text-muted);
     white-space: pre-wrap;
     word-break: break-word;
+    transition: color 0.3s ease;
 }
 
 .raw::-webkit-scrollbar {
@@ -291,22 +309,26 @@
 }
 
 .raw::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.3);
+    background: var(--bg-scrollbar-thumb);
     border-radius: 3px;
 }
 
 /* ── Footer ──────────────────────────────────────────────────── */
 .footer {
     padding: 14px 24px;
-    background: rgba(0, 0, 0, 0.2);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--bg-footer);
+    border-top: 1px solid var(--border-footer);
     display: flex;
     align-items: center;
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
 }
 
 .footerTip {
     font-size: 0.78rem;
-    color: #64748b;
+    color: var(--text-muted);
+    transition: color 0.3s ease;
 }
 
 .footerLink {
