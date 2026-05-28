@@ -4,12 +4,13 @@ import { ResearchProgress } from '@/components/ResearchProgress';
 import { ResearchResult } from '@/components/ResearchResult';
 import { SavedGuides, GuideFile } from '@/components/SavedGuides';
 import { CopilotSidebar, useConfigureSuggestions, useAgent } from '@copilotkit/react-core/v2';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AgentState } from '@/lib/types';
 import { useAgentSelector } from '@/components/CopilotWrapper';
+import { CodingArena } from '@/components/CodingArena';
 
 export default function CopilotKitPage() {
-    const { activeAgentId, setActiveAgentId } = useAgentSelector();
+    const { activeAgentId, setActiveAgentId, currentView } = useAgentSelector();
 
     useConfigureSuggestions({
         suggestions:
@@ -47,7 +48,7 @@ export default function CopilotKitPage() {
                       {
                           title: 'Database Architecture',
                           message:
-                              'Compare PostgreSQL and MongoDB performance characteristics and design trade-offs.',
+                              'Compare PostgreSQL and MongoDB performance characteristics and trade-offs.',
                       },
                       {
                           title: 'System Design',
@@ -86,10 +87,10 @@ export default function CopilotKitPage() {
             setWasRunning(true);
             setSelectedReport(null);
             setSelectedFilename('');
-            setShouldAutoSelect(true);
         } else if (wasRunning) {
             // Agent finished running
             setWasRunning(false);
+            setShouldAutoSelect(true);
             setRefreshTrigger((prev) => prev + 1);
         }
     }, [researchAgent.isRunning, wasRunning]);
@@ -102,32 +103,35 @@ export default function CopilotKitPage() {
         }
     }, [state.report_result]);
 
-    const handleSelectGuide = (content: string, filename: string) => {
+    const handleSelectGuide = useCallback((content: string, filename: string) => {
         setSelectedReport(content);
         setSelectedFilename(filename);
-    };
+    }, []);
 
-    const handleClearGuide = () => {
+    const handleClearGuide = useCallback(() => {
         setSelectedReport(null);
         setSelectedFilename('');
-    };
+    }, []);
 
-    const handleGuidesLoaded = async (guides: GuideFile[]) => {
-        if (shouldAutoSelect && guides.length > 0) {
-            const newest = guides[0];
-            try {
-                const response = await fetch(`/api/guides/${newest.filename}`);
-                if (response.ok) {
-                    const content = await response.text();
-                    setSelectedReport(content);
-                    setSelectedFilename(newest.filename);
-                    setShouldAutoSelect(false);
+    const handleGuidesLoaded = useCallback(
+        async (guides: GuideFile[]) => {
+            if (shouldAutoSelect && guides.length > 0) {
+                const newest = guides[0];
+                try {
+                    const response = await fetch(`/api/guides/${newest.filename}`);
+                    if (response.ok) {
+                        const content = await response.text();
+                        setSelectedReport(content);
+                        setSelectedFilename(newest.filename);
+                        setShouldAutoSelect(false);
+                    }
+                } catch (err) {
+                    console.error('Failed to auto-load newest guide:', err);
                 }
-            } catch (err) {
-                console.error('Failed to auto-load newest guide:', err);
             }
-        }
-    };
+        },
+        [shouldAutoSelect],
+    );
 
     const welcomeMessage =
         activeAgentId === 'study_buddy_qa'
@@ -136,23 +140,29 @@ export default function CopilotKitPage() {
 
     return (
         <main>
-            <MainContent
-                selectedReport={selectedReport}
-                selectedFilename={selectedFilename}
-                onSelectGuide={handleSelectGuide}
-                onClearGuide={handleClearGuide}
-                refreshTrigger={refreshTrigger}
-                agentRunning={researchAgent.isRunning}
-                onGuidesLoaded={handleGuidesLoaded}
-                activeAgentId={activeAgentId}
-            />
-            <CopilotSidebar
-                key={activeAgentId}
-                defaultOpen
-                labels={{
-                    welcomeMessageText: welcomeMessage,
-                }}
-            />
+            {currentView === 'research' ? (
+                <>
+                    <MainContent
+                        selectedReport={selectedReport}
+                        selectedFilename={selectedFilename}
+                        onSelectGuide={handleSelectGuide}
+                        onClearGuide={handleClearGuide}
+                        refreshTrigger={refreshTrigger}
+                        agentRunning={researchAgent.isRunning}
+                        onGuidesLoaded={handleGuidesLoaded}
+                        activeAgentId={activeAgentId}
+                    />
+                    <CopilotSidebar
+                        key={activeAgentId}
+                        defaultOpen
+                        labels={{
+                            welcomeMessageText: welcomeMessage,
+                        }}
+                    />
+                </>
+            ) : (
+                <CodingArena />
+            )}
         </main>
     );
 }
@@ -179,20 +189,29 @@ function MainContent({
     activeAgentId,
 }: MainContentProps) {
     return (
-        <div className="min-h-screen flex flex-col justify-center items-center gap-6 py-10 px-4 bg-gradient-to-br from-[#0f0f23] via-[#1a1a3e] to-[#0f0f23]">
+        <div
+            className="min-h-screen flex flex-col justify-center items-center gap-6 py-10 px-4 bg-gradient-to-br transition-colors duration-300"
+            style={{
+                backgroundImage:
+                    'linear-gradient(to bottom right, var(--bg-gradient-from), var(--bg-gradient-via), var(--bg-gradient-to))',
+            }}
+        >
             {/* Hero heading */}
             <div className="text-center mb-2">
-                <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
+                <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-violet-500">
                     Study Buddy
                 </h1>
-                <p className="mt-2 text-slate-400 text-sm">
+                <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
                     Ask me to research any topic &mdash; I&apos;ll build you a full interview study
                     guide.
                 </p>
             </div>
 
             {/* Mode Switcher */}
-            <div className="flex bg-[#161633]/80 backdrop-blur-md p-1 rounded-xl border border-indigo-500/20 shadow-xl max-w-sm w-full mx-auto">
+            <div
+                className="flex backdrop-blur-md p-1 rounded-xl border border-indigo-500/20 shadow-xl max-w-sm w-full mx-auto transition-colors duration-300"
+                style={{ background: 'var(--bg-mode-switcher)' }}
+            >
                 <button
                     type="button"
                     onClick={onClearGuide}
@@ -228,7 +247,10 @@ function MainContent({
                         <ResearchResult report={selectedReport} onClose={onClearGuide} />
                     </div>
                 ) : (
-                    <div className="w-full max-w-2xl p-8 rounded-2xl border border-indigo-500/10 bg-[#161633]/30 backdrop-blur-md text-center flex flex-col items-center gap-4 shadow-xl">
+                    <div
+                        className="w-full max-w-2xl p-8 rounded-2xl border border-indigo-500/10 backdrop-blur-md text-center flex flex-col items-center gap-4 shadow-xl transition-colors duration-300"
+                        style={{ background: 'var(--bg-panel)' }}
+                    >
                         <div className="p-4 bg-indigo-500/5 rounded-full text-indigo-400/80">
                             <svg
                                 className="w-8 h-8"
@@ -245,10 +267,16 @@ function MainContent({
                             </svg>
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold text-slate-300">
+                            <h3
+                                className="text-lg font-semibold"
+                                style={{ color: 'var(--text-primary)' }}
+                            >
                                 Ready to Research
                             </h3>
-                            <p className="mt-2 text-slate-400 text-sm max-w-md mx-auto">
+                            <p
+                                className="mt-2 text-sm max-w-md mx-auto"
+                                style={{ color: 'var(--text-secondary)' }}
+                            >
                                 Enter a topic in the chat sidebar to start web research and build a
                                 comprehensive study guide.
                             </p>
@@ -260,7 +288,10 @@ function MainContent({
                     <ResearchResult report={selectedReport} onClose={onClearGuide} />
                 </div>
             ) : (
-                <div className="w-full max-w-2xl p-8 rounded-2xl border border-indigo-500/20 bg-[#161633]/50 backdrop-blur-md text-center flex flex-col items-center gap-4 shadow-xl">
+                <div
+                    className="w-full max-w-2xl p-8 rounded-2xl border border-indigo-500/20 backdrop-blur-md text-center flex flex-col items-center gap-4 shadow-xl transition-colors duration-300"
+                    style={{ background: 'var(--bg-panel)' }}
+                >
                     <div className="p-4 bg-indigo-500/10 rounded-full text-indigo-400">
                         <svg
                             className="w-8 h-8"
@@ -277,10 +308,16 @@ function MainContent({
                         </svg>
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-slate-200">
+                        <h3
+                            className="text-lg font-semibold"
+                            style={{ color: 'var(--text-primary)' }}
+                        >
                             No Study Guide Selected
                         </h3>
-                        <p className="mt-2 text-slate-400 text-sm max-w-md mx-auto">
+                        <p
+                            className="mt-2 text-sm max-w-md mx-auto"
+                            style={{ color: 'var(--text-secondary)' }}
+                        >
                             To start a Q&A session, please research a new topic first or select one
                             of your previously saved guides below.
                         </p>

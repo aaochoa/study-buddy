@@ -77,3 +77,4 @@ coverage/
 # Agent
 .antigravitycli
 *.DS
+.github/*

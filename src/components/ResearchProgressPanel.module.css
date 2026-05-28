@@ -4,10 +4,10 @@
 
 /* ── Panel shell ─────────────────────────────────────────────── */
 .panel {
-    background: rgba(15, 15, 35, 0.72);
+    background: var(--bg-panel);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 28px 32px;
     width: 100%;
@@ -16,6 +16,9 @@
         0 8px 40px rgba(0, 0, 0, 0.45),
         0 0 0 1px rgba(99, 102, 241, 0.15) inset;
     animation: slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
 }
 
 @keyframes slideUp {
@@ -36,7 +39,8 @@
     gap: 14px;
     margin-bottom: 28px;
     padding-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--border-color);
+    transition: border-color 0.3s ease;
 }
 
 .headerIcon {
@@ -49,15 +53,17 @@
     margin: 0;
     font-size: 1.1rem;
     font-weight: 700;
-    color: #e2e8f0;
+    color: var(--text-primary);
     letter-spacing: -0.01em;
+    transition: color 0.3s ease;
 }
 
 .headerSubtitle {
     margin: 3px 0 0;
     font-size: 0.78rem;
-    color: #94a3b8;
+    color: var(--text-secondary);
     line-height: 1.4;
+    transition: color 0.3s ease;
 }
 
 /* ── Steps list ──────────────────────────────────────────────── */
@@ -79,7 +85,7 @@
     width: 2px;
     height: 22px;
     transform: translateY(-22px);
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--border-color);
     border-radius: 2px;
     transition: background 0.4s ease;
 }
@@ -114,9 +120,9 @@
 
 /* pending */
 .stepPending .circle {
-    background: rgba(255, 255, 255, 0.06);
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    color: #64748b;
+    background: var(--bg-item);
+    border: 2px solid var(--border-color);
+    color: var(--text-muted);
 }
 
 /* active */
@@ -141,7 +147,7 @@
 }
 
 .stepNumber {
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 /* ── Spinner ─────────────────────────────────────────────────── */
@@ -183,11 +189,11 @@
 }
 
 .stepPending .stepLabel {
-    color: #475569;
+    color: var(--text-muted);
 }
 
 .stepActive .stepLabel {
-    color: #e2e8f0;
+    color: var(--text-primary);
 }
 
 .stepDone .stepLabel {
@@ -202,25 +208,26 @@
 }
 
 .stepPending .stepDesc {
-    color: #334155;
+    color: var(--text-muted);
 }
 
 .stepActive .stepDesc {
-    color: #94a3b8;
+    color: var(--text-secondary);
 }
 
 .stepDone .stepDesc {
-    color: #6b7280;
+    color: var(--text-muted);
 }
 
 /* ── Research preview box ────────────────────────────────────── */
 .preview {
     margin-top: 20px;
     padding: 14px 16px;
-    background: rgba(99, 102, 241, 0.08);
+    background: var(--bg-panel-header);
     border: 1px solid rgba(99, 102, 241, 0.2);
     border-radius: 10px;
     animation: fadeIn 0.4s ease both;
+    transition: background 0.3s ease;
 }
 
 @keyframes fadeIn {
@@ -245,21 +252,25 @@
     margin: 0;
     font-size: 0.78rem;
     line-height: 1.55;
-    color: #94a3b8;
+    color: var(--text-secondary);
     font-style: italic;
+    transition: color 0.3s ease;
 }
 
 /* ── Active Query (inside step Content) ─────────────────────── */
 .activeQueryContainer {
     margin-top: 8px;
     padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px dashed rgba(255, 255, 255, 0.15);
+    background: var(--bg-item);
+    border: 1px dashed var(--border-color);
     border-radius: 8px;
     display: flex;
     flex-direction: column;
     gap: 3px;
     animation: fadeIn 0.3s ease both;
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
 }
 
 .activeQueryLabel {
@@ -272,7 +283,8 @@
 
 .activeQueryText {
     font-size: 0.75rem;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     line-height: 1.3;
+    transition: color 0.3s ease;
 }

@@ -174,8 +174,8 @@ const rootAgent = new SequentialAgent({
     subAgents: [researchAgent, reportAgent],
 });
 
-const port = process.env.PORT || 8000;
-toA2a(rootAgent).then((app) => {
+const port = Number(process.env.PORT || 8000);
+toA2a(rootAgent, { port }).then((app) => {
     app.listen(port, () => {
         console.log(`Agent server listening on port ${port}`);
     });

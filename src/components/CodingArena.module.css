@@ -1,0 +1,292 @@
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 24px;
+    width: 100%;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 24px;
+    height: calc(100vh - 110px);
+    box-sizing: border-box;
+    animation: revealUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes revealUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Panel Structures ───────────────────────────────────────── */
+.leftPanel,
+.rightPanel {
+    background: var(--bg-panel);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.panelHeader {
+    padding: 16px 24px;
+    background: var(--bg-panel-header);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.panelTitle {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.3s ease;
+}
+
+.scrollContent {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+/* ── Dropdowns / selectors ──────────────────────────────────── */
+.selectors {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 16px;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.selectGroup {
+    display: flex;
+    gap: 12px;
+}
+
+.select {
+    background: var(--bg-select);
+    border: 1px solid var(--select-border);
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.select:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: var(--bg-select-hover);
+}
+
+/* ── Badges ─────────────────────────────────────────────────── */
+.badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.easy {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.medium {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.hard {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ── Markdown description styling ───────────────────────────── */
+.problemDesc {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    transition: color 0.3s ease;
+}
+
+.problemDesc h3 {
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin: 24px 0 8px;
+    font-weight: 600;
+}
+
+.problemDesc code {
+    background: var(--bg-code-inline);
+    border: 1px solid var(--border-code-inline);
+    border-radius: 5px;
+    padding: 2px 6px;
+    font-size: 0.85em;
+    color: var(--text-code-inline);
+    font-family: monospace;
+}
+
+.problemDesc ul {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.problemDesc li {
+    margin-bottom: 6px;
+    list-style-type: disc;
+}
+
+/* ── Code Editor ────────────────────────────────────────────── */
+.editorWrapper {
+    flex: 1.3;
+    position: relative;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-editor);
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.textarea {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    resize: none;
+    color: var(--text-code);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    padding: 20px;
+    outline: none;
+    box-sizing: border-box;
+    transition: color 0.3s ease;
+}
+
+/* ── Submit Panel & Console Terminal ────────────────────────── */
+.terminalWrapper {
+    flex: 0.9;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-terminal);
+    transition: background 0.3s ease;
+}
+
+.terminalHeader {
+    padding: 10px 24px;
+    background: var(--bg-panel-header);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.terminalLogs {
+    flex: 1;
+    padding: 16px 24px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    word-break: break-all;
+    transition: color 0.3s ease;
+}
+
+.terminalLogs::-webkit-scrollbar {
+    width: 6px;
+}
+
+.terminalLogs::-webkit-scrollbar-thumb {
+    background: var(--bg-scrollbar-thumb);
+    border-radius: 3px;
+}
+
+.submitBtn {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+
+.submitBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.45);
+}
+
+.submitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Terminal Log Color States */
+.logNormal {
+    color: var(--text-secondary);
+}
+
+.logSuccess {
+    color: #10b981;
+    font-weight: 700;
+}
+
+.logError {
+    color: #ef4444;
+}
+
+.logWarning {
+    color: #f59e0b;
+}
+
+@media (max-width: 900px) {
+    .container {
+        grid-template-columns: 1fr;
+        height: auto;
+        padding: 16px;
+    }
+
+    .leftPanel,
+    .rightPanel {
+        height: 500px;
+    }
+}
