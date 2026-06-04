@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { createClient } from '@/utils/supabase/server';
 
 const execAsync = promisify(exec);
 
@@ -18,18 +19,30 @@ export async function POST(req: Request) {
         }
 
         // 1. Load the problem database to retrieve the test harness
-        const dbPath = path.join(process.cwd(), 'src', 'fixtures', 'problems.json');
-        if (!fs.existsSync(dbPath)) {
-            return NextResponse.json({ error: 'Problems database not found' }, { status: 500 });
-        }
-        const problems = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
-        const problem = problems.find((p: any) => p.id === problemId);
+        const supabase = await createClient();
 
-        if (!problem) {
+        // Get the current authenticated user
+        const {
+            data: { user },
+            error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Fetch the problem definition from the database
+        const { data: problem, error: problemError } = await supabase
+            .from('problems')
+            .select('languages')
+            .eq('id', problemId)
+            .maybeSingle();
+
+        if (problemError || !problem) {
             return NextResponse.json({ error: 'Problem not found' }, { status: 404 });
         }
 
-        const langConfig = problem.languages[language];
+        const langConfig = (problem.languages as any)?.[language];
         if (!langConfig) {
             return NextResponse.json(
                 { error: `Language ${language} not supported for this problem` },

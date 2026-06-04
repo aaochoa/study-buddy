@@ -1,31 +1,40 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request: Request, { params }: { params: Promise<{ filename: string }> }) {
     try {
         const { filename } = await params;
-        const cleanFilename = path.basename(filename);
+        const supabase = await createClient();
 
-        if (!cleanFilename.toLowerCase().endsWith('.md')) {
-            return NextResponse.json({ error: 'Invalid file format' }, { status: 400 });
+        // Get the current authenticated user
+        const {
+            data: { user },
+            error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const researchDir = path.join(process.cwd(), 'research');
-        const filePath = path.join(researchDir, cleanFilename);
+        // Fetch guide content from Supabase
+        const { data: guide, error } = await supabase
+            .from('guides')
+            .select('content')
+            .eq('user_id', user.id)
+            .eq('filename', filename)
+            .maybeSingle();
 
-        if (!fs.existsSync(filePath)) {
+        if (error || !guide) {
             return NextResponse.json({ error: 'Guide not found' }, { status: 404 });
         }
 
-        const content = fs.readFileSync(filePath, 'utf-8');
-        return new NextResponse(content, {
+        return new NextResponse(guide.content, {
             headers: {
                 'Content-Type': 'text/markdown; charset=utf-8',
             },
         });
     } catch (error: any) {
-        console.error('Failed to get guide content:', error);
+        console.error('Failed to get guide content from DB:', error);
         return NextResponse.json({ error: 'Failed to retrieve guide' }, { status: 500 });
     }
 }
