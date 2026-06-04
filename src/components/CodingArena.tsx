@@ -19,6 +19,9 @@ export function CodingArena() {
 
     // In-memory cache to save written code between tab/problem/language switches
     const codeCache = useRef<Record<string, string>>({});
+    // In-memory cache to track completion status and last saved code to prevent redundant saves
+    const completedRef = useRef<Record<string, boolean>>({});
+    const lastSavedCodeRef = useRef<Record<string, string>>({});
 
     const { copilotkit } = useCopilotKit();
     const { agent: challengesAgent } = useAgent({ agentId: 'study_buddy_challenges' });
@@ -87,13 +90,9 @@ export function CodingArena() {
                     data.forEach((sol: any) => {
                         const cacheKey = `${sol.problem_id}-${sol.language}`;
                         codeCache.current[cacheKey] = sol.code;
+                        completedRef.current[cacheKey] = !!sol.completed;
+                        lastSavedCodeRef.current[cacheKey] = sol.code;
                     });
-
-                    // Set code for currently selected if present
-                    const currentCacheKey = `${selectedProblemId}-${selectedLanguage}`;
-                    if (codeCache.current[currentCacheKey] !== undefined) {
-                        setCode(codeCache.current[currentCacheKey]);
-                    }
                 }
             } catch (err) {
                 console.error('Failed to load user solutions from DB:', err);
@@ -102,9 +101,9 @@ export function CodingArena() {
             }
         };
         loadUserSolutions();
-    }, [selectedProblemId, selectedLanguage]);
+    }, []); // Run ONLY once on mount
 
-    // Load template code when problem or language changes, only after DB load completes
+    // Load template code or cached code when problem or language changes, only after DB load completes
     useEffect(() => {
         if (!currentProblem || !loaded) return;
 
@@ -117,8 +116,128 @@ export function CodingArena() {
             const defaultCode = langConfig ? langConfig.template : '';
             setCode(defaultCode);
             codeCache.current[cacheKey] = defaultCode;
+            lastSavedCodeRef.current[cacheKey] = defaultCode;
         }
     }, [selectedProblemId, selectedLanguage, currentProblem, loaded]);
+
+    // Auto-save solution to DB on typing (debounced)
+    useEffect(() => {
+        if (!loaded || !selectedProblemId || !selectedLanguage) return;
+
+        const cacheKey = `${selectedProblemId}-${selectedLanguage}`;
+
+        // If code is the same as the last saved code, do not save
+        if (code === lastSavedCodeRef.current[cacheKey]) return;
+
+        const timer = setTimeout(async () => {
+            try {
+                const codeToSave = code;
+                const isCompleted = !!completedRef.current[cacheKey];
+
+                const response = await fetch('/api/challenges', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        problemId: selectedProblemId,
+                        language: selectedLanguage,
+                        code: codeToSave,
+                        completed: isCompleted,
+                    }),
+                });
+
+                if (response.ok) {
+                    lastSavedCodeRef.current[cacheKey] = codeToSave;
+                } else {
+                    const errData = await response.json();
+                    console.error('Failed to auto-save solution to DB:', errData);
+                }
+            } catch (dbErr) {
+                console.error('Failed to auto-save solution to DB:', dbErr);
+            }
+        }, 1500); // 1.5s debounce
+
+        return () => {
+            clearTimeout(timer);
+        };
+    }, [code, selectedProblemId, selectedLanguage, loaded]);
+
+    // Auto-save the previous problem/language when user switches
+    const prevProblemIdRef = useRef(selectedProblemId);
+    const prevLanguageRef = useRef(selectedLanguage);
+
+    useEffect(() => {
+        const prevProblemId = prevProblemIdRef.current;
+        const prevLanguage = prevLanguageRef.current;
+
+        if (
+            prevProblemId &&
+            prevLanguage &&
+            (prevProblemId !== selectedProblemId || prevLanguage !== selectedLanguage)
+        ) {
+            const prevCacheKey = `${prevProblemId}-${prevLanguage}`;
+            const prevCode = codeCache.current[prevCacheKey];
+            if (prevCode && prevCode !== lastSavedCodeRef.current[prevCacheKey]) {
+                const isCompleted = !!completedRef.current[prevCacheKey];
+                fetch('/api/challenges', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        problemId: prevProblemId,
+                        language: prevLanguage,
+                        code: prevCode,
+                        completed: isCompleted,
+                    }),
+                })
+                    .then((res) => {
+                        if (res.ok) {
+                            lastSavedCodeRef.current[prevCacheKey] = prevCode;
+                        }
+                    })
+                    .catch((err) =>
+                        console.error('Failed to save previous challenge on switch:', err),
+                    );
+            }
+        }
+
+        prevProblemIdRef.current = selectedProblemId;
+        prevLanguageRef.current = selectedLanguage;
+    }, [selectedProblemId, selectedLanguage]);
+
+    // Auto-save on component unmount
+    const codeRef = useRef(code);
+    const selectedProblemIdRef = useRef(selectedProblemId);
+    const selectedLanguageRef = useRef(selectedLanguage);
+
+    useEffect(() => {
+        codeRef.current = code;
+        selectedProblemIdRef.current = selectedProblemId;
+        selectedLanguageRef.current = selectedLanguage;
+    }, [code, selectedProblemId, selectedLanguage]);
+
+    useEffect(() => {
+        const lastSavedCode = lastSavedCodeRef.current;
+        const completed = completedRef.current;
+        return () => {
+            const problemId = selectedProblemIdRef.current;
+            const language = selectedLanguageRef.current;
+            const cacheKey = `${problemId}-${language}`;
+            const currentCode = codeRef.current;
+
+            if (problemId && language && currentCode && currentCode !== lastSavedCode[cacheKey]) {
+                const isCompleted = !!completed[cacheKey];
+                fetch('/api/challenges', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        problemId,
+                        language,
+                        code: currentCode,
+                        completed: isCompleted,
+                    }),
+                }).catch((err) => console.error('Failed to save on unmount:', err));
+            }
+        };
+    }, []);
 
     // Keep cache updated when user types
     const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -216,17 +335,27 @@ export function CodingArena() {
             setTerminalLogs((prev) => [...prev, ...logs]);
 
             // Save solution to Supabase
+            const cacheKey = `${selectedProblemId}-${selectedLanguage}`;
+            const isCompleted = !!data.success;
+            completedRef.current[cacheKey] = isCompleted;
+
             try {
-                await fetch('/api/challenges', {
+                const response = await fetch('/api/challenges', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         problemId: selectedProblemId,
                         language: selectedLanguage,
                         code: code,
-                        completed: !!data.success,
+                        completed: isCompleted,
                     }),
                 });
+                if (response.ok) {
+                    lastSavedCodeRef.current[cacheKey] = code;
+                } else {
+                    const errData = await response.json();
+                    console.error('Failed to save solution to DB:', errData);
+                }
             } catch (dbErr) {
                 console.error('Failed to auto-save solution to DB:', dbErr);
             }
