@@ -78,3 +78,4 @@ coverage/
 .antigravitycli
 *.DS
 .github/*
+agent/research
