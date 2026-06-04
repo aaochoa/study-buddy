@@ -21,7 +21,7 @@ const STEPS: Step[] = [
     {
         id: 'done',
         label: 'Complete',
-        description: 'Your personalised study guide is ready.',
+        description: 'Your personalised study guide and coding challenges are ready.',
         icon: '✅',
     },
 ];
@@ -30,7 +30,8 @@ const phaseOrder: Record<ResearchPhase, number> = {
     idle: -1,
     researching: 0,
     editing: 1,
-    done: 2,
+    challenges: 2,
+    done: 3,
     error: -1,
 };
 
@@ -46,7 +47,11 @@ function getCurrentSearchQuery(messages?: any[]): string | null {
         const msg = messages[i];
         if (msg.parts) {
             for (const part of msg.parts) {
-                if (part.functionCall && part.functionCall.name === 'GOOGLE_SEARCH') {
+                if (
+                    part.functionCall &&
+                    (part.functionCall.name === 'GOOGLE_SEARCH' ||
+                        part.functionCall.name === 'google_search')
+                ) {
                     const query = part.functionCall.args?.query;
                     if (query) return query;
                 }

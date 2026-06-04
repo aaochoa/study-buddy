@@ -80,9 +80,56 @@
     box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25);
 }
 
+/* ── Right Section (Theme Toggle + User Details) ───────────────── */
+.rightSection {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.userContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    background: var(--bg-panel-alt);
+    border: 1px solid var(--border-subtle);
+    max-width: 240px;
+}
+
+.userEmail {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.signOutBtn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #ef4444;
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.signOutBtn:hover {
+    color: #fff;
+    background: #ef4444;
+    border-color: #ef4444;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
 /* ── Theme Toggle Button ────────────────────────────────────────── */
 .themeToggle {
-    margin-left: auto;
     width: 40px;
     height: 40px;
     border-radius: 12px;

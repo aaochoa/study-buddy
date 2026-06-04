@@ -1,42 +1,112 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useAgent, useCopilotKit } from '@copilotkit/react-core/v2';
 import styles from './CodingArena.module.css';
-import problemsData from '../fixtures/problems.json';
-
-// Type definitions
-interface LanguageConfig {
-    template: string;
-    harness: string;
-}
-
-interface Problem {
-    id: string;
-    title: string;
-    difficulty: string;
-    description: string;
-    languages: Record<string, LanguageConfig>;
-}
+import { ProblemSpecPanel, Problem } from './ProblemSpecPanel';
+import { CodeWorkspacePanel } from './CodeWorkspacePanel';
 
 export function CodingArena() {
-    const problems = problemsData as Problem[];
-
-    const [selectedProblemId, setSelectedProblemId] = useState<string>(problems[0]?.id || '');
+    const [problems, setProblems] = useState<Problem[]>([]);
+    const [selectedProblemId, setSelectedProblemId] = useState<string>('');
     const [selectedLanguage, setSelectedLanguage] = useState<string>('python');
     const [code, setCode] = useState<string>('');
     const [terminalLogs, setTerminalLogs] = useState<
         Array<{ text: string; type: 'normal' | 'success' | 'error' | 'warning' }>
     >([]);
     const [loading, setLoading] = useState<boolean>(false);
+    const [loaded, setLoaded] = useState<boolean>(false);
 
     // In-memory cache to save written code between tab/problem/language switches
     const codeCache = useRef<Record<string, string>>({});
 
+    const { copilotkit } = useCopilotKit();
+    const { agent: challengesAgent } = useAgent({ agentId: 'study_buddy_challenges' });
+    const [wasGenerating, setWasGenerating] = useState(false);
+
     const currentProblem = problems.find((p) => p.id === selectedProblemId) || problems[0];
 
-    // Load template code when problem or language changes
+    const fetchProblems = useCallback(async () => {
+        try {
+            const res = await fetch('/api/problems');
+            if (res.ok) {
+                const data = await res.json();
+                setProblems(data);
+                if (data.length > 0) {
+                    setSelectedProblemId((prev) => {
+                        // If current selected ID still exists in new data, keep it, else pick first
+                        return data.some((p: Problem) => p.id === prev) ? prev : data[0].id;
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch problems from DB:', err);
+        }
+    }, []);
+
+    // Fetch problems from Supabase on mount
     useEffect(() => {
-        if (!currentProblem) return;
+        fetchProblems();
+    }, [fetchProblems]);
+
+    // Refresh problems when challenges agent finishes generating
+    useEffect(() => {
+        if (challengesAgent.isRunning) {
+            setWasGenerating(true);
+        } else if (wasGenerating && !challengesAgent.isRunning) {
+            setWasGenerating(false);
+            // Delay slightly to let page.tsx effect save the problems to DB
+            setTimeout(() => {
+                fetchProblems();
+            }, 2500);
+        }
+    }, [challengesAgent.isRunning, wasGenerating, fetchProblems]);
+
+    const handleGenerateNewProblems = async () => {
+        if (challengesAgent.isRunning) return;
+
+        try {
+            challengesAgent.addMessage({
+                id: crypto.randomUUID(),
+                role: 'user',
+                content: 'Generate 3 coding challenges.',
+            });
+            await copilotkit.runAgent({ agent: challengesAgent });
+        } catch (err) {
+            console.error('Failed to trigger challenges agent:', err);
+        }
+    };
+
+    // Load solutions from Supabase on mount
+    useEffect(() => {
+        const loadUserSolutions = async () => {
+            try {
+                const response = await fetch('/api/challenges');
+                if (response.ok) {
+                    const data = await response.json();
+                    data.forEach((sol: any) => {
+                        const cacheKey = `${sol.problem_id}-${sol.language}`;
+                        codeCache.current[cacheKey] = sol.code;
+                    });
+
+                    // Set code for currently selected if present
+                    const currentCacheKey = `${selectedProblemId}-${selectedLanguage}`;
+                    if (codeCache.current[currentCacheKey] !== undefined) {
+                        setCode(codeCache.current[currentCacheKey]);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load user solutions from DB:', err);
+            } finally {
+                setLoaded(true);
+            }
+        };
+        loadUserSolutions();
+    }, [selectedProblemId, selectedLanguage]);
+
+    // Load template code when problem or language changes, only after DB load completes
+    useEffect(() => {
+        if (!currentProblem || !loaded) return;
 
         const cacheKey = `${selectedProblemId}-${selectedLanguage}`;
 
@@ -48,7 +118,7 @@ export function CodingArena() {
             setCode(defaultCode);
             codeCache.current[cacheKey] = defaultCode;
         }
-    }, [selectedProblemId, selectedLanguage, currentProblem]);
+    }, [selectedProblemId, selectedLanguage, currentProblem, loaded]);
 
     // Keep cache updated when user types
     const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -62,9 +132,10 @@ export function CodingArena() {
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Tab') {
             e.preventDefault();
-            const start = e.currentTarget.selectionStart;
-            const end = e.currentTarget.selectionEnd;
-            const val = e.currentTarget.value;
+            const target = e.currentTarget;
+            const start = target.selectionStart;
+            const end = target.selectionEnd;
+            const val = target.value;
 
             const newVal = val.substring(0, start) + '    ' + val.substring(end);
             setCode(newVal);
@@ -74,7 +145,7 @@ export function CodingArena() {
 
             // Maintain cursor position after state update
             setTimeout(() => {
-                e.currentTarget.selectionStart = e.currentTarget.selectionEnd = start + 4;
+                target.selectionStart = target.selectionEnd = start + 4;
             }, 0);
         }
     };
@@ -143,6 +214,22 @@ export function CodingArena() {
             }
 
             setTerminalLogs((prev) => [...prev, ...logs]);
+
+            // Save solution to Supabase
+            try {
+                await fetch('/api/challenges', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        problemId: selectedProblemId,
+                        language: selectedLanguage,
+                        code: code,
+                        completed: !!data.success,
+                    }),
+                });
+            } catch (dbErr) {
+                console.error('Failed to auto-save solution to DB:', dbErr);
+            }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             setTerminalLogs((prev) => [
@@ -157,195 +244,27 @@ export function CodingArena() {
         }
     };
 
-    const getDifficultyClass = (diff: string) => {
-        switch (diff.toLowerCase()) {
-            case 'easy':
-                return styles.easy;
-            case 'medium':
-                return styles.medium;
-            case 'hard':
-                return styles.hard;
-            default:
-                return '';
-        }
-    };
-
-    // Format markdown tags inside problem description
-    const formatDescription = (desc: string) => {
-        return desc.split('\n').map((line, index) => {
-            if (line.startsWith('###')) {
-                return (
-                    <h3 key={index} className="text-md font-bold mt-4 mb-2 text-indigo-300">
-                        {line.replace('###', '').trim()}
-                    </h3>
-                );
-            }
-            if (line.startsWith('-')) {
-                return (
-                    <ul key={index} className="list-disc pl-5 my-1">
-                        <li>{line.substring(1).trim()}</li>
-                    </ul>
-                );
-            }
-            // Simple inline code replacement
-            const parts = line.split('`');
-            if (parts.length > 1) {
-                return (
-                    <p key={index} className="my-2">
-                        {parts.map((p, i) =>
-                            i % 2 === 1 ? (
-                                <code
-                                    key={i}
-                                    className="bg-indigo-950/40 border border-indigo-900/30 px-1.5 py-0.5 rounded text-indigo-300 font-mono text-xs"
-                                >
-                                    {p}
-                                </code>
-                            ) : (
-                                p
-                            ),
-                        )}
-                    </p>
-                );
-            }
-            return (
-                <p key={index} className="my-2">
-                    {line}
-                </p>
-            );
-        });
-    };
-
     return (
         <div className={styles.container}>
-            {/* ── LEFT PANEL: PROBLEM SPEC ──────────────────── */}
-            <div className={styles.leftPanel}>
-                <div className={styles.panelHeader}>
-                    <div className={styles.selectors}>
-                        <div className={styles.selectGroup}>
-                            <select
-                                value={selectedProblemId}
-                                onChange={(e) => setSelectedProblemId(e.target.value)}
-                                className={styles.select}
-                                aria-label="Select Problem"
-                            >
-                                {problems.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.title}
-                                    </option>
-                                ))}
-                            </select>
+            <ProblemSpecPanel
+                problems={problems}
+                selectedProblemId={selectedProblemId}
+                onSelectProblem={setSelectedProblemId}
+                selectedLanguage={selectedLanguage}
+                onSelectLanguage={setSelectedLanguage}
+                currentProblem={currentProblem}
+                isGenerating={challengesAgent.isRunning}
+                onGenerateNew={handleGenerateNewProblems}
+            />
 
-                            <select
-                                value={selectedLanguage}
-                                onChange={(e) => setSelectedLanguage(e.target.value)}
-                                className={styles.select}
-                                aria-label="Select Programming Language"
-                            >
-                                {Object.keys(currentProblem?.languages || {}).map((lang) => (
-                                    <option key={lang} value={lang}>
-                                        {lang === 'cpp'
-                                            ? 'C++'
-                                            : lang.charAt(0).toUpperCase() + lang.slice(1)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        {currentProblem && (
-                            <span
-                                className={[
-                                    styles.badge,
-                                    getDifficultyClass(currentProblem.difficulty),
-                                ].join(' ')}
-                            >
-                                {currentProblem.difficulty}
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                <div className={styles.scrollContent}>
-                    {currentProblem && (
-                        <div>
-                            <h2
-                                className="text-xl font-bold mb-4"
-                                style={{ color: 'var(--text-heading)' }}
-                            >
-                                {currentProblem.title}
-                            </h2>
-                            <div className={styles.problemDesc}>
-                                {formatDescription(currentProblem.description)}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* ── RIGHT PANEL: CODE WORKSPACE ────────────────── */}
-            <div className={styles.rightPanel}>
-                <div className={styles.panelHeader}>
-                    <h3 className={styles.panelTitle}>
-                        <span>📝 Editor Workspace</span>
-                    </h3>
-                </div>
-
-                <div className={styles.editorWrapper}>
-                    <textarea
-                        value={code}
-                        onChange={handleCodeChange}
-                        onKeyDown={handleKeyDown}
-                        className={styles.textarea}
-                        spellCheck="false"
-                        placeholder="Write your solution here..."
-                        aria-label="Code Editor"
-                    />
-                </div>
-
-                <div className={styles.terminalWrapper}>
-                    <div className={styles.terminalHeader}>
-                        <span
-                            className="text-xs font-semibold"
-                            style={{ color: 'var(--text-secondary)' }}
-                        >
-                            🖥️ Sandbox Terminal
-                        </span>
-                        <button
-                            type="button"
-                            onClick={handleRunCode}
-                            disabled={loading || !code}
-                            className={styles.submitBtn}
-                        >
-                            {loading ? 'Executing...' : 'Run & Validate'}
-                        </button>
-                    </div>
-
-                    <div className={styles.terminalLogs}>
-                        {terminalLogs.length === 0 ? (
-                            <span
-                                className="font-mono text-xs"
-                                style={{ color: 'var(--text-muted)' }}
-                            >
-                                {`Terminal idle. Click 'Run & Validate' to execute test assertions...`}
-                            </span>
-                        ) : (
-                            terminalLogs.map((log, index) => {
-                                let logClass = styles.logNormal;
-                                if (log.type === 'success') logClass = styles.logSuccess;
-                                else if (log.type === 'error') logClass = styles.logError;
-                                else if (log.type === 'warning') logClass = styles.logWarning;
-
-                                return (
-                                    <div
-                                        key={index}
-                                        className={[logClass, 'font-mono text-xs mb-1'].join(' ')}
-                                    >
-                                        {log.text}
-                                    </div>
-                                );
-                            })
-                        )}
-                    </div>
-                </div>
-            </div>
+            <CodeWorkspacePanel
+                code={code}
+                onCodeChange={handleCodeChange}
+                onKeyDown={handleKeyDown}
+                terminalLogs={terminalLogs}
+                loading={loading}
+                onRunCode={handleRunCode}
+            />
         </div>
     );
 }
