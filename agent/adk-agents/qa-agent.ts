@@ -1,14 +1,11 @@
-import { LlmAgent, toA2a, LLMRegistry, Context } from '@google/adk';
+import { LlmAgent, Context } from '@google/adk';
 import * as fs from 'fs';
 import * as path from 'path';
 import dotenv from 'dotenv';
-import { qaAgentInstruction } from './utils/prompts';
-import { OpenRouterLlm } from './utils/openrouter-llm';
+import { qaAgentInstruction } from '../utils/prompts';
+import { OpenRouterLlm } from '../utils/openrouter-llm';
 
 dotenv.config();
-
-// Register the custom OpenRouter LLM provider
-LLMRegistry.register(OpenRouterLlm);
 
 const getModel = () => {
     if (process.env.QA_MODEL) {
@@ -87,13 +84,6 @@ const qaAgent = new LlmAgent({
         maxOutputTokens: 2000,
         temperature: 0.3,
     },
-});
-
-const port = Number(process.env.QA_PORT || 8001);
-toA2a(qaAgent, { port }).then((app) => {
-    app.listen(port, () => {
-        console.log(`QA Agent server listening on port ${port}`);
-    });
 });
 
 export default qaAgent;

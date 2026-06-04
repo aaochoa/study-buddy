@@ -87,6 +87,7 @@
 
 .select {
     background: var(--bg-select);
+    width: 9rem;
     border: 1px solid var(--select-border);
     border-radius: 10px;
     padding: 8px 16px;
@@ -289,4 +290,30 @@
     .rightPanel {
         height: 500px;
     }
+}
+
+.generateBtn {
+    background: rgba(99, 102, 241, 0.1);
+    color: #8b5cf6;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.generateBtn:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+.generateBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }

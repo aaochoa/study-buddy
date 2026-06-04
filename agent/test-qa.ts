@@ -1,4 +1,4 @@
-import qaAgent from './qa-main';
+import qaAgent from './adk-agents/qa-agent';
 import { Runner, InMemorySessionService } from '@google/adk';
 
 async function main() {

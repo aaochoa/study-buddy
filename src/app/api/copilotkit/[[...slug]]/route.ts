@@ -60,13 +60,18 @@ class TextMessageA2AAgent extends A2AAgent {
 }
 
 const a2aClient = new A2AClient(
-    (process.env.AGENT_URL || 'http://localhost:8000').replace(/\/$/, ''),
+    (process.env.AGENT_URL || 'http://localhost:8000/search').replace(/\/$/, ''),
     '.well-known/agent-card.json',
 );
 
 const qaA2aClient = new A2AClient(
-    (process.env.QA_AGENT_URL || 'http://localhost:8001').replace(/\/$/, ''),
+    (process.env.QA_AGENT_URL || 'http://localhost:8000/qa').replace(/\/$/, ''),
     '.well-known/agent-card.json',
+);
+
+const challengesA2aClient = new A2AClient(
+    (process.env.CHALLENGES_AGENT_URL || 'http://localhost:8000/challenges').replace(/\/$/, ''),
+    '.well-known/agent-card.json?v=2',
 );
 
 const runtime = new CopilotRuntime({
@@ -76,6 +81,9 @@ const runtime = new CopilotRuntime({
         }),
         study_buddy_qa: new TextMessageA2AAgent({
             a2aClient: qaA2aClient,
+        }),
+        study_buddy_challenges: new TextMessageA2AAgent({
+            a2aClient: challengesA2aClient,
         }),
     },
     runner: new InMemoryAgentRunner(),

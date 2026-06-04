@@ -6,6 +6,7 @@ export type AgentState = {
     pitfalls_result?: string;
     challenges_result?: string;
     report_result?: string;
+    code_challenges?: string;
 };
 
-export type ResearchPhase = 'idle' | 'researching' | 'editing' | 'done' | 'error';
+export type ResearchPhase = 'idle' | 'researching' | 'editing' | 'challenges' | 'done' | 'error';
