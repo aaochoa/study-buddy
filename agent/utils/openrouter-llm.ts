@@ -1,4 +1,32 @@
-import { BaseLlm, LlmRequest, LlmResponse } from '@google/adk';
+import { BaseLlm, LlmRequest, LlmResponse, GOOGLE_SEARCH, LLMRegistry } from '@google/adk';
+
+// Override the processLlmRequest of GOOGLE_SEARCH to prevent it from throwing for non-Gemini models
+const originalProcessLlmRequest = GOOGLE_SEARCH.processLlmRequest;
+GOOGLE_SEARCH.processLlmRequest = async function (params) {
+    const { llmRequest } = params;
+    if (!llmRequest || !llmRequest.model) {
+        return;
+    }
+
+    const openRouterModelRegex = /^(gemini-)?([a-zA-Z0-9\-]+\/[a-zA-Z0-9\-]+.*)$/;
+    if (openRouterModelRegex.test(llmRequest.model)) {
+        // For OpenRouter models, initialize config/tools and add placeholder to prevent crashes
+        llmRequest.config = llmRequest.config || {};
+        llmRequest.config.tools = llmRequest.config.tools || [];
+
+        const hasSearch = llmRequest.config.tools.some(
+            (t: any) => t.googleSearch || t.googleSearchRetrieval,
+        );
+        if (!hasSearch) {
+            llmRequest.config.tools.push({
+                googleSearch: {},
+            });
+        }
+        return;
+    }
+
+    return originalProcessLlmRequest.call(this, params);
+};
 
 export class OpenRouterLlm extends BaseLlm {
     // Matches model IDs that have a slash (e.g. google/gemini-2.5-flash) or openrouter/ prefixed ones, and allows gemini- prefix to bypass adk checks
@@ -18,7 +46,28 @@ export class OpenRouterLlm extends BaseLlm {
         stream: boolean = false,
         abortSignal?: AbortSignal,
     ): AsyncGenerator<LlmResponse, void> {
-        const systemInstruction = llmRequest.config?.systemInstruction;
+        const { url, headers, body } = this.buildRequestPayload(llmRequest, stream);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: abortSignal,
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
+        }
+
+        if (stream) {
+            yield* this.handleStreamResponse(response);
+        } else {
+            yield* this.handleSingleResponse(response);
+        }
+    }
+
+    private mapMessages(contents: LlmRequest['contents'], systemInstruction?: any): any[] {
         const messages: any[] = [];
 
         // 1. Add System Instruction
@@ -30,7 +79,7 @@ export class OpenRouterLlm extends BaseLlm {
         }
 
         // 2. Map Gemini contents to OpenAI-style messages
-        for (const content of llmRequest.contents) {
+        for (const content of contents) {
             // Map role: 'model' -> 'assistant', 'user' -> 'user'
             const role = content.role === 'model' ? 'assistant' : 'user';
 
@@ -76,14 +125,17 @@ export class OpenRouterLlm extends BaseLlm {
             }
         }
 
-        // 3. Map Gemini tools to OpenAI tools
-        const tools: any[] = [];
-        if (llmRequest.config?.tools) {
-            for (const t of llmRequest.config.tools) {
+        return messages;
+    }
+
+    private mapTools(tools?: any[]): any[] {
+        const mappedTools: any[] = [];
+        if (tools) {
+            for (const t of tools) {
                 const anyTool = t as any;
                 if (anyTool.functionDeclarations) {
                     for (const decl of anyTool.functionDeclarations) {
-                        tools.push({
+                        mappedTools.push({
                             type: 'function',
                             function: {
                                 name: decl.name,
@@ -92,17 +144,35 @@ export class OpenRouterLlm extends BaseLlm {
                             },
                         });
                     }
+                } else if (anyTool.googleSearch || anyTool.googleSearchRetrieval) {
+                    // Map Gemini googleSearch/googleSearchRetrieval to OpenRouter's web_search tool
+                    mappedTools.push({
+                        type: 'openrouter:web_search',
+                    });
                 }
             }
         }
+        return mappedTools;
+    }
 
-        // 4. Map response JSON format configuration
-        let responseFormat: any = undefined;
-        if (llmRequest.config?.responseMimeType === 'application/json') {
-            responseFormat = { type: 'json_object' };
+    private mapResponseFormat(responseMimeType?: string): any {
+        if (responseMimeType === 'application/json') {
+            return { type: 'json_object' };
         }
+        return undefined;
+    }
 
-        // 5. Send POST request to OpenRouter
+    private buildRequestPayload(
+        llmRequest: LlmRequest,
+        stream: boolean,
+    ): { url: string; headers: Record<string, string>; body: any } {
+        const messages = this.mapMessages(
+            llmRequest.contents,
+            llmRequest.config?.systemInstruction,
+        );
+        const tools = this.mapTools(llmRequest.config?.tools);
+        const responseFormat = this.mapResponseFormat(llmRequest.config?.responseMimeType);
+
         const openrouterUrl = (process.env.OPENROUTER_URL || 'https://openrouter.ai').replace(
             /\/$/,
             '',
@@ -136,188 +206,178 @@ export class OpenRouterLlm extends BaseLlm {
             'X-Title': 'Study Buddy AI',
         };
 
-        const response = await fetch(`${openrouterUrl}/api/v1/chat/completions`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(requestBody),
-            signal: abortSignal,
-        });
+        return { url: `${openrouterUrl}/api/v1/chat/completions`, headers, body: requestBody };
+    }
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
+    private async *handleStreamResponse(response: Response): AsyncGenerator<LlmResponse, void> {
+        if (!response.body) {
+            throw new Error('Response body is empty');
         }
 
-        if (stream) {
-            if (!response.body) {
-                throw new Error('Response body is empty');
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let accumulatedText = '';
+
+        const accumulatedToolCalls: Record<
+            number,
+            {
+                id?: string;
+                name?: string;
+                arguments: string;
             }
+        > = {};
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let buffer = '';
-            let accumulatedText = '';
+        let finishReason: string | undefined = undefined;
 
-            const accumulatedToolCalls: Record<
-                number,
-                {
-                    id?: string;
-                    name?: string;
-                    arguments: string;
-                }
-            > = {};
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-            let finishReason: string | undefined = undefined;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+                if (trimmed.startsWith('data: ')) {
+                    const dataStr = trimmed.slice(6);
+                    if (dataStr === '[DONE]') {
+                        break;
+                    }
+                    try {
+                        const parsed = JSON.parse(dataStr);
+                        const choice = parsed.choices?.[0];
+                        if (!choice) continue;
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed) continue;
-                    if (trimmed.startsWith('data: ')) {
-                        const dataStr = trimmed.slice(6);
-                        if (dataStr === '[DONE]') {
-                            break;
+                        if (choice.finish_reason) {
+                            finishReason =
+                                choice.finish_reason === 'stop' ? 'STOP' : choice.finish_reason;
                         }
-                        try {
-                            const parsed = JSON.parse(dataStr);
-                            const choice = parsed.choices?.[0];
-                            if (!choice) continue;
 
-                            if (choice.finish_reason) {
-                                finishReason =
-                                    choice.finish_reason === 'stop' ? 'STOP' : choice.finish_reason;
-                            }
+                        const delta = choice.delta;
+                        if (!delta) continue;
 
-                            const delta = choice.delta;
-                            if (!delta) continue;
+                        const parts: any[] = [];
 
-                            const parts: any[] = [];
+                        if (delta.content) {
+                            accumulatedText += delta.content;
+                            parts.push({ text: delta.content });
+                        }
 
-                            if (delta.content) {
-                                accumulatedText += delta.content;
-                                parts.push({ text: delta.content });
-                            }
-
-                            if (delta.tool_calls) {
-                                for (const tc of delta.tool_calls) {
-                                    const index = tc.index;
-                                    if (accumulatedToolCalls[index] === undefined) {
-                                        accumulatedToolCalls[index] = { arguments: '' };
-                                    }
-                                    const acc = accumulatedToolCalls[index];
-                                    if (tc.id) acc.id = tc.id;
-                                    if (tc.function?.name) acc.name = tc.function.name;
-                                    if (tc.function?.arguments)
-                                        acc.arguments += tc.function.arguments;
+                        if (delta.tool_calls) {
+                            for (const tc of delta.tool_calls) {
+                                const index = tc.index;
+                                if (accumulatedToolCalls[index] === undefined) {
+                                    accumulatedToolCalls[index] = { arguments: '' };
                                 }
+                                const acc = accumulatedToolCalls[index];
+                                if (tc.id) acc.id = tc.id;
+                                if (tc.function?.name) acc.name = tc.function.name;
+                                if (tc.function?.arguments) acc.arguments += tc.function.arguments;
                             }
-
-                            if (parts.length > 0) {
-                                yield {
-                                    content: {
-                                        role: 'model',
-                                        parts,
-                                    },
-                                    partial: true,
-                                };
-                            }
-                        } catch (e) {
-                            // Ignore partial JSON parsing errors
                         }
+
+                        if (parts.length > 0) {
+                            yield {
+                                content: {
+                                    role: 'model',
+                                    parts,
+                                },
+                                partial: true,
+                            };
+                        }
+                    } catch (e) {
+                        // Ignore partial JSON parsing errors
                     }
                 }
             }
+        }
 
-            // Yield any accumulated tool calls once stream ends
-            const finalParts: any[] = [];
-            for (const index of Object.keys(accumulatedToolCalls)
-                .map(Number)
-                .sort((a, b) => a - b)) {
-                const acc = accumulatedToolCalls[index];
-                if (acc.name) {
+        // Yield any accumulated tool calls once stream ends
+        const finalParts: any[] = [];
+        for (const index of Object.keys(accumulatedToolCalls)
+            .map(Number)
+            .sort((a, b) => a - b)) {
+            const acc = accumulatedToolCalls[index];
+            if (acc.name) {
+                let args = {};
+                try {
+                    args = JSON.parse(acc.arguments);
+                } catch (e) {
+                    console.error(
+                        'Failed to parse accumulated tool call arguments:',
+                        acc.arguments,
+                    );
+                }
+                finalParts.push({
+                    functionCall: {
+                        name: acc.name,
+                        args,
+                        id: acc.id,
+                    },
+                });
+            }
+        }
+
+        // Always yield a final non-partial event containing the full accumulated text or tools
+        yield {
+            content: {
+                role: 'model',
+                parts: finalParts.length > 0 ? finalParts : [{ text: accumulatedText }],
+            },
+            finishReason: (finishReason || 'STOP') as any,
+            partial: false,
+        };
+    }
+
+    private async *handleSingleResponse(response: Response): AsyncGenerator<LlmResponse, void> {
+        const data = await response.json();
+        const choice = data.choices?.[0];
+        const message = choice?.message;
+
+        if (!message) {
+            console.error('OpenRouter full response on failure:', JSON.stringify(data, null, 2));
+            throw new Error('No message returned from OpenRouter');
+        }
+
+        const parts: any[] = [];
+
+        if (message.content) {
+            parts.push({ text: message.content });
+        }
+
+        if (message.tool_calls) {
+            for (const tc of message.tool_calls) {
+                if (tc.type === 'function') {
                     let args = {};
                     try {
-                        args = JSON.parse(acc.arguments);
+                        args = JSON.parse(tc.function.arguments);
                     } catch (e) {
-                        console.error(
-                            'Failed to parse accumulated tool call arguments:',
-                            acc.arguments,
-                        );
+                        console.error('Failed to parse function arguments:', tc.function.arguments);
                     }
-                    finalParts.push({
+                    parts.push({
                         functionCall: {
-                            name: acc.name,
+                            name: tc.function.name,
                             args,
-                            id: acc.id,
+                            id: tc.id,
                         },
                     });
                 }
             }
-
-            // Always yield a final non-partial event containing the full accumulated text or tools
-            yield {
-                content: {
-                    role: 'model',
-                    parts: finalParts.length > 0 ? finalParts : [{ text: accumulatedText }],
-                },
-                finishReason: (finishReason || 'STOP') as any,
-                partial: false,
-            };
-        } else {
-            const data = await response.json();
-            const choice = data.choices?.[0];
-            const message = choice?.message;
-
-            if (!message) {
-                throw new Error('No message returned from OpenRouter');
-            }
-
-            const parts: any[] = [];
-
-            if (message.content) {
-                parts.push({ text: message.content });
-            }
-
-            if (message.tool_calls) {
-                for (const tc of message.tool_calls) {
-                    if (tc.type === 'function') {
-                        let args = {};
-                        try {
-                            args = JSON.parse(tc.function.arguments);
-                        } catch (e) {
-                            console.error(
-                                'Failed to parse function arguments:',
-                                tc.function.arguments,
-                            );
-                        }
-                        parts.push({
-                            functionCall: {
-                                name: tc.function.name,
-                                args,
-                                id: tc.id,
-                            },
-                        });
-                    }
-                }
-            }
-
-            yield {
-                content: {
-                    role: 'model',
-                    parts,
-                },
-                finishReason: (choice.finish_reason === 'stop'
-                    ? 'STOP'
-                    : choice.finish_reason) as any,
-                partial: false,
-            };
         }
+
+        yield {
+            content: {
+                role: 'model',
+                parts,
+            },
+            finishReason: (choice.finish_reason === 'stop' ? 'STOP' : choice.finish_reason) as any,
+            partial: false,
+        };
     }
 }
+
+// Register the custom OpenRouter LLM provider once globally
+LLMRegistry.register(OpenRouterLlm);
