@@ -27,6 +27,19 @@ export function CodeWorkspacePanel({
             </div>
 
             <div className={styles.editorWrapper}>
+                <div
+                    className={styles.lineNumbers}
+                    style={{
+                        width: '40px',
+                        paddingRight: '10px',
+                        borderRight: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-secondary)',
+                    }}
+                >
+                    {code.split('\\n').map((_, i) => (
+                        <div key={i}>{i + 1}</div>
+                    ))}
+                </div>
                 <textarea
                     value={code}
                     onChange={onCodeChange}

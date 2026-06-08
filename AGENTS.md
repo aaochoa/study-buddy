@@ -26,7 +26,7 @@ and streams the progress/result back to the browser in real time.
 
 ## Repository Structure
 
-```
+```text
 study-buddy/
 ├── agent/                        # ADK agent server (separate Node process)
 │   ├── main.ts                   # Entry point — defines and starts the A2A server
@@ -68,19 +68,20 @@ study-buddy/
 
 ---
 
-## Agent Architecture
+## Agent Architecture & Workflow
 
-The backend is a **SequentialAgent** running two sub-agents:
+The backend is a **SequentialAgent** that moves through two primary stages to fulfill user requests. This transition is reflected in the `AgentState` found in `src/lib/types.ts`.
 
-```
-search_assistant (SequentialAgent)
-  ├── researcher (LlmAgent)   — uses GOOGLE_SEARCH tool, writes to state key: search_result
-  └── editor    (LlmAgent)   — reads search_result, writes to state key: report_result
-                               afterAgentCallback: writes .md file to agent/ directory
-```
+**Workflow Pipeline:**
 
-The A2A server is started by `agent/main.ts` and listens on `PORT` (default `8000`).  
-The frontend connects via `AGENT_URL` env var (default `http://localhost:8000`).
+1. **Research Phase:** `researcher` (LlmAgent) utilizes the `GOOGLE_SEARCH` tool. It outputs results to state key: `search_result`.
+2. **Refining phase**: Once `search_result` is populated, the `editor` (LlmAgent) takes over. It processes the raw data and produces a final Markdown report in the `report_result` state key.
+
+**State Transitions:**
+
+- **Idle $\rightarrow$ Researching:** Triggered by user input/initialization.
+- **Researching $\rightarrow$ Editing:** Automatically occurs once `researcher` populates `search_result`.
+- **Editing $\rightarrow$ Done:** Occurs after `editor` produces the final content and triggers the `afterAgentCallback` to write the `.md` file.​
 
 ### CopilotKit Bridge (`route.ts`)
 
@@ -94,15 +95,15 @@ The agent card is discovered via `.well-known/agent-card.json` (not `.well-known
 
 ### Agent State → UI
 
-The frontend reads state using `useAgent({ agentId: 'study_buddy_agent' })`.  
-The `ResearchProgress` component derives phase from state:
+The frontend consumes the agent state via `useAgent({ agentId: 'study_buddy_agent' })`.
+The `ResearchProgress` component determines the current phase based on the presence of specific keys in the state object:
 
-```
-report_result present  → 'done'
-search_result present  → 'editing'
-agent.isRunning        → 'researching'
-otherwise              → 'idle'  (component returns null)
-```
+- **done**: `report_result` is present.
+- **editing**: `search_result` is present (but `report_result` is not).
+- **researching**: `agent.isRunning` is true.
+- **idle**: No specific results are present, or the agent is not currently running.
+
+The component returns `null` if the state is in an "idle" condition.
 
 ---
 
@@ -125,7 +126,7 @@ The agent is re-started automatically by `tsx watch` on file changes.
 
 ### `agent/.env` (agent process)
 
-```
+```bash
 GOOGLE_GENAI_API_KEY=<your Gemini API key>
 GOOGLE_GENAI_MODEL=gemini-2.0-flash
 PORT=8000
@@ -133,7 +134,7 @@ PORT=8000
 
 ### Root `.env.local` (Next.js process)
 
-```
+```bash
 AGENT_URL=http://localhost:8000
 COPILOTKIT_TELEMETRY_DISABLED=true   # optional
 ```
@@ -175,7 +176,7 @@ pn test           # Jest (root)
 cd agent && pn test  # Agent-specific tests
 ```
 
-Test files go in the same directory as the file under test, named `*.test.ts` / `*.test.tsx`.  
+Test files go in the same directory as the file under test, named `*.test.ts` / `*.test.tsx`.
 Fixture data lives in `fixtures/`.
 
 ---
