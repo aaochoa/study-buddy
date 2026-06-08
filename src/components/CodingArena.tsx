@@ -184,7 +184,9 @@ export function CodingArena() {
             logs.push({ text: '[3/3] Sandbox execution finished.', type: 'normal' });
 
             if (data.error) {
-                logs.push({ text: `\n=== ERROR LOGGER ===\n${data.error}`, type: 'error' });
+                const isSyntax = data.error.toLowerCase().includes('syntax');
+                const prefix = isSyntax ? '--- SYNTAX ERROR ---' : '--- EXECUTION ERROR ---';
+                logs.push({ text: `\n${prefix}\n${data.error}`, type: 'error' });
             }
 
             if (data.output) {
