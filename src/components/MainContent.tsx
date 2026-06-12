@@ -16,6 +16,13 @@ interface MainContentProps {
     activeAgentId: string;
 }
 
+/**
+ * MainContent component renders the central workspace of the application.
+ * It toggles between Research Mode and Q&A Mode, displays progress, and
+ * renders the selected study guides.
+ *
+ * @param props - Props for MainContent component including callbacks and active states.
+ */
 export function MainContent({
     selectedReport,
     selectedFilename,
