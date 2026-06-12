@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAgent, useCopilotKit } from '@copilotkit/react-core/v2';
+import { logger } from '@/lib/logger';
 import styles from './CodingArena.module.css';
 import { ProblemSpecPanel, Problem } from './ProblemSpecPanel';
 import { CodeWorkspacePanel } from './CodeWorkspacePanel';
@@ -43,7 +44,7 @@ export function CodingArena() {
                 }
             }
         } catch (err) {
-            console.error('Failed to fetch problems from DB:', err);
+            logger.error({ err }, 'Failed to fetch problems from DB');
         }
     }, []);
 
@@ -76,7 +77,7 @@ export function CodingArena() {
             });
             await copilotkit.runAgent({ agent: challengesAgent });
         } catch (err) {
-            console.error('Failed to trigger challenges agent:', err);
+            logger.error({ err }, 'Failed to trigger challenges agent');
         }
     };
 
@@ -95,7 +96,7 @@ export function CodingArena() {
                     });
                 }
             } catch (err) {
-                console.error('Failed to load user solutions from DB:', err);
+                logger.error({ err }, 'Failed to load user solutions from DB');
             } finally {
                 setLoaded(true);
             }
@@ -149,10 +150,10 @@ export function CodingArena() {
                     lastSavedCodeRef.current[cacheKey] = codeToSave;
                 } else {
                     const errData = await response.json();
-                    console.error('Failed to auto-save solution to DB:', errData);
+                    logger.error({ errData }, 'Failed to auto-save solution to DB');
                 }
             } catch (dbErr) {
-                console.error('Failed to auto-save solution to DB:', dbErr);
+                logger.error({ err: dbErr }, 'Failed to auto-save solution to DB');
             }
         }, 1500); // 1.5s debounce
 
@@ -194,7 +195,7 @@ export function CodingArena() {
                         }
                     })
                     .catch((err) =>
-                        console.error('Failed to save previous challenge on switch:', err),
+                        logger.error({ err }, 'Failed to save previous challenge on switch'),
                     );
             }
         }
@@ -234,7 +235,7 @@ export function CodingArena() {
                         code: currentCode,
                         completed: isCompleted,
                     }),
-                }).catch((err) => console.error('Failed to save on unmount:', err));
+                }).catch((err) => logger.error({ err }, 'Failed to save on unmount'));
             }
         };
     }, []);
@@ -356,10 +357,10 @@ export function CodingArena() {
                     lastSavedCodeRef.current[cacheKey] = code;
                 } else {
                     const errData = await response.json();
-                    console.error('Failed to save solution to DB:', errData);
+                    logger.error({ errData }, 'Failed to save solution to DB');
                 }
             } catch (dbErr) {
-                console.error('Failed to auto-save solution to DB:', dbErr);
+                logger.error({ err: dbErr }, 'Failed to auto-save solution to DB');
             }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);

@@ -79,3 +79,5 @@ coverage/
 *.DS
 .github/*
 agent/research
+scratch/
+

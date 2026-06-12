@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
     try {
@@ -61,7 +62,7 @@ export async function GET() {
                     }
                 }
             } catch (syncErr) {
-                console.error('Failed to sync files from filesystem to DB:', syncErr);
+                logger.error({ err: syncErr }, 'Failed to sync files from filesystem to DB');
             }
         }
 
@@ -78,7 +79,7 @@ export async function GET() {
 
         return NextResponse.json(guides || []);
     } catch (error: any) {
-        console.error('Failed to list guides from DB:', error);
+        logger.error({ err: error }, 'Failed to list guides from DB');
         return NextResponse.json({ error: 'Failed to list guides' }, { status: 500 });
     }
 }
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json(data ? data[0] : null);
     } catch (error: any) {
-        console.error('Failed to save guide to DB:', error);
+        logger.error({ err: error }, 'Failed to save guide to DB');
         return NextResponse.json({ error: 'Failed to save guide' }, { status: 500 });
     }
 }

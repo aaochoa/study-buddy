@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
     try {
@@ -48,12 +49,12 @@ export async function GET() {
                         .select('id, title, difficulty, description, languages');
 
                     if (insertError) {
-                        console.error('Failed to seed default problems to DB:', insertError);
+                        logger.error({ err: insertError }, 'Failed to seed default problems to DB');
                     } else if (insertedProblems) {
                         return NextResponse.json(insertedProblems);
                     }
                 } catch (jsonErr) {
-                    console.error('Error parsing default problems JSON:', jsonErr);
+                    logger.error({ err: jsonErr }, 'Error parsing default problems JSON');
                 }
             }
             return NextResponse.json([]);
@@ -61,7 +62,7 @@ export async function GET() {
 
         return NextResponse.json(dbProblems);
     } catch (error: any) {
-        console.error('Failed to list problems from DB:', error);
+        logger.error({ err: error }, 'Failed to list problems from DB');
         return NextResponse.json({ error: 'Failed to list problems' }, { status: 500 });
     }
 }
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json(data);
     } catch (error: any) {
-        console.error('Failed to save problems to DB:', error);
+        logger.error({ err: error }, 'Failed to save problems to DB');
         return NextResponse.json(
             { error: error.message || 'Failed to save problems' },
             { status: 500 },

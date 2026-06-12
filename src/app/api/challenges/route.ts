@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
     try {
@@ -27,7 +28,7 @@ export async function GET() {
 
         return NextResponse.json(challenges || []);
     } catch (error: any) {
-        console.error('Failed to list coding challenges from DB:', error);
+        logger.error({ err: error }, 'Failed to list coding challenges from DB');
         return NextResponse.json({ error: 'Failed to list coding challenges' }, { status: 500 });
     }
 }
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json(data ? data[0] : null);
     } catch (error: any) {
-        console.error('Failed to save coding challenge to DB:', error);
+        logger.error({ err: error }, 'Failed to save coding challenge to DB');
         return NextResponse.json({ error: 'Failed to save coding challenge' }, { status: 500 });
     }
 }

@@ -18,7 +18,6 @@ export function LoginForm() {
         const formData = new FormData(event.currentTarget);
 
         startTransition(async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const result = (isSignUp ? await signup(formData) : await login(formData)) as any;
 
             if (result?.error) {

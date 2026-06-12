@@ -1,4 +1,5 @@
 import { BaseLlm, LlmRequest, LlmResponse, GOOGLE_SEARCH, LLMRegistry } from '@google/adk';
+import { logger } from './logger';
 
 // Override the processLlmRequest of GOOGLE_SEARCH to prevent it from throwing for non-Gemini models
 const originalProcessLlmRequest = GOOGLE_SEARCH.processLlmRequest;
@@ -306,9 +307,9 @@ export class OpenRouterLlm extends BaseLlm {
                 try {
                     args = JSON.parse(acc.arguments);
                 } catch (e) {
-                    console.error(
-                        'Failed to parse accumulated tool call arguments:',
-                        acc.arguments,
+                    logger.error(
+                        { arguments: acc.arguments, err: e },
+                        'Failed to parse accumulated tool call arguments',
                     );
                 }
                 finalParts.push({
@@ -338,7 +339,7 @@ export class OpenRouterLlm extends BaseLlm {
         const message = choice?.message;
 
         if (!message) {
-            console.error('OpenRouter full response on failure:', JSON.stringify(data, null, 2));
+            logger.error({ responseData: data }, 'OpenRouter full response on failure');
             throw new Error('No message returned from OpenRouter');
         }
 
@@ -355,7 +356,10 @@ export class OpenRouterLlm extends BaseLlm {
                     try {
                         args = JSON.parse(tc.function.arguments);
                     } catch (e) {
-                        console.error('Failed to parse function arguments:', tc.function.arguments);
+                        logger.error(
+                            { arguments: tc.function.arguments, err: e },
+                            'Failed to parse function arguments',
+                        );
                     }
                     parts.push({
                         functionCall: {

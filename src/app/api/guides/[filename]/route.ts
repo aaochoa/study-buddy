@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request, { params }: { params: Promise<{ filename: string }> }) {
     try {
@@ -34,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ file
             },
         });
     } catch (error: any) {
-        console.error('Failed to get guide content from DB:', error);
+        logger.error({ err: error }, 'Failed to get guide content from DB');
         return NextResponse.json({ error: 'Failed to retrieve guide' }, { status: 500 });
     }
 }

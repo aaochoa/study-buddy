@@ -4,6 +4,7 @@ import * as path from 'path';
 import dotenv from 'dotenv';
 import { qaAgentInstruction } from '../utils/prompts';
 import { OpenRouterLlm } from '../utils/openrouter-llm';
+import { logger } from '../utils/logger';
 
 dotenv.config();
 
@@ -47,7 +48,7 @@ const getLatestGuideContent = (): string => {
 
         return fs.readFileSync(sorted[0].path, 'utf-8');
     } catch (err) {
-        console.error('Failed to read latest guide file:', err);
+        logger.error({ err }, 'Failed to read latest guide file');
         return '';
     }
 };

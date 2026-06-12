@@ -4,6 +4,7 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createClient } from '@/utils/supabase/server';
+import { logger } from '@/lib/logger';
 
 const execAsync = promisify(exec);
 
@@ -127,7 +128,7 @@ export async function POST(req: Request) {
             error: stderr.trim(),
         });
     } catch (err: any) {
-        console.error('Execution router error:', err);
+        logger.error({ err }, 'Execution router error');
         return NextResponse.json({ error: err.message || 'Execution error' }, { status: 500 });
     } finally {
         // 6. Clean up temporary files
@@ -139,7 +140,7 @@ export async function POST(req: Request) {
                 fs.unlinkSync(tempBin);
             }
         } catch (cleanupErr) {
-            console.error('Failed to cleanup temp files:', cleanupErr);
+            logger.error({ err: cleanupErr }, 'Failed to cleanup temp files');
         }
     }
 }
