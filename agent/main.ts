@@ -9,6 +9,10 @@ const app = express();
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.json({ limit: '50mb' }));
 
+/**
+ * Initializes and starts the Express A2A agent server by registering
+ * the search, QA, and coding challenges agents to their respective endpoints.
+ */
 const startServer = async () => {
     await toA2a(rootAgent, { app, basePath: '/search' });
     await toA2a(qaAgent, { app, basePath: '/qa' });

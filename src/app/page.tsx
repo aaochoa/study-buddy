@@ -18,6 +18,10 @@ import { MainContent } from '@/components/MainContent';
 import { CodingArena } from '@/components/CodingArena';
 import { useReportAutoSave } from '@/hooks/useReportAutoSave';
 
+/**
+ * CopilotKitPage component serves as the main interactive page for the Study Buddy application,
+ * integrating CopilotKit agents for research/Q&A, suggestions, and rendering MainContent/CodingArena.
+ */
 export default function CopilotKitPage() {
     const { activeAgentId, setActiveAgentId, currentView } = useAgentSelector();
 
@@ -128,6 +132,10 @@ export default function CopilotKitPage() {
             !challengesState.code_challenges &&
             !challengesTriggered
         ) {
+            /**
+             * Triggers the independent challenges agent to generate coding problems
+             * based on the newly completed study guide.
+             */
             const runChallenges = async () => {
                 setChallengesTriggered(true);
                 try {
@@ -160,6 +168,12 @@ export default function CopilotKitPage() {
             return;
         }
 
+        /**
+         * Helper function to post diagnostics/logs to the server-side logging endpoint.
+         *
+         * @param level - The log level (e.g. INFO, DEBUG, ERROR).
+         * @param message - The log payload message.
+         */
         const logToServer = (level: string, message: any) => {
             fetch('/api/log', {
                 method: 'POST',
@@ -168,6 +182,13 @@ export default function CopilotKitPage() {
             }).catch(() => {});
         };
 
+        /**
+         * Traverses the messages history in reverse to find the latest
+         * JSON-formatted block containing coding challenges definitions.
+         *
+         * @param messages - The history of messages.
+         * @returns The JSON challenges string if found, or null.
+         */
         const getChallengesFromMessages = (messages: any[]) => {
             for (let i = messages.length - 1; i >= 0; i--) {
                 const msg = messages[i];
@@ -197,7 +218,14 @@ export default function CopilotKitPage() {
         const challengesContent = challengesState.code_challenges || challengesFromMessages;
 
         if (challengesContent && challengesContent !== lastSavedChallenges) {
+            /**
+             * Extracts, cleans, parses, and batch saves the generated challenges JSON
+             * into the database by calling the problems API.
+             */
             const saveChallenges = async () => {
+                /**
+                 * Local logging utility to send progress reports of the save operation to the log endpoint.
+                 */
                 const logToServer = (level: string, message: any) => {
                     fetch('/api/log', {
                         method: 'POST',
@@ -287,16 +315,31 @@ export default function CopilotKitPage() {
         challengesAgent.isRunning,
     ]);
 
+    /**
+     * Callback invoked to select and display a specific study guide in the dashboard workspace.
+     *
+     * @param content - The markdown content of the guide.
+     * @param filename - The filename of the guide.
+     */
     const handleSelectGuide = useCallback((content: string, filename: string) => {
         setSelectedReport(content);
         setSelectedFilename(filename);
     }, []);
 
+    /**
+     * Callback invoked to clear the current active study guide selection, reverting back to Research Mode.
+     */
     const handleClearGuide = useCallback(() => {
         setSelectedReport(null);
         setSelectedFilename('');
     }, []);
 
+    /**
+     * Callback invoked when the saved guides list finishes loading from the server.
+     * Auto-selects the newest guide if the auto-select flag is true.
+     *
+     * @param guides - List of guide files retrieved.
+     */
     const handleGuidesLoaded = useCallback(
         async (guides: GuideFile[]) => {
             if (shouldAutoSelect && guides.length > 0) {

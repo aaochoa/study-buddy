@@ -4,6 +4,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { logger } from '@/lib/logger';
 
+/**
+ * Handles GET requests to retrieve the list of all coding problems globally,
+ * seeding them from the local fixtures file if the database table is empty.
+ *
+ * @returns A JSON response with the problems list or an error.
+ */
 export async function GET() {
     try {
         const supabase = await createClient();
@@ -67,6 +73,12 @@ export async function GET() {
     }
 }
 
+/**
+ * Handles POST requests to batch save or update coding problems globally in the system.
+ *
+ * @param request - The incoming Request containing the array of problems to upsert.
+ * @returns A JSON response with the upserted problems records or an error.
+ */
 export async function POST(request: Request) {
     try {
         const supabase = await createClient();

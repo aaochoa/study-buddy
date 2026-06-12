@@ -7,6 +7,11 @@ import styles from './CodingArena.module.css';
 import { ProblemSpecPanel, Problem } from './ProblemSpecPanel';
 import { CodeWorkspacePanel } from './CodeWorkspacePanel';
 
+/**
+ * CodingArena component provides an interactive workspace for practicing coding challenges.
+ * It lets the user select a problem, pick a programming language, edit the solution code
+ * with tab indentation, execute the tests in a sandbox, and view output/results in a terminal.
+ */
 export function CodingArena() {
     const [problems, setProblems] = useState<Problem[]>([]);
     const [selectedProblemId, setSelectedProblemId] = useState<string>('');
@@ -30,6 +35,10 @@ export function CodingArena() {
 
     const currentProblem = problems.find((p) => p.id === selectedProblemId) || problems[0];
 
+    /**
+     * Fetches the global list of coding problems from the server-side database
+     * and auto-selects the first available problem if none is currently selected.
+     */
     const fetchProblems = useCallback(async () => {
         try {
             const res = await fetch('/api/problems');
@@ -66,6 +75,10 @@ export function CodingArena() {
         }
     }, [challengesAgent.isRunning, wasGenerating, fetchProblems]);
 
+    /**
+     * Triggers the challenges agent to generate new coding challenges
+     * to populate the problems database.
+     */
     const handleGenerateNewProblems = async () => {
         if (challengesAgent.isRunning) return;
 
@@ -83,6 +96,10 @@ export function CodingArena() {
 
     // Load solutions from Supabase on mount
     useEffect(() => {
+        /**
+         * Fetches and caches the user's previously saved solutions from the database
+         * to pre-populate their workspace editor.
+         */
         const loadUserSolutions = async () => {
             try {
                 const response = await fetch('/api/challenges');
@@ -240,7 +257,11 @@ export function CodingArena() {
         };
     }, []);
 
-    // Keep cache updated when user types
+    /**
+     * Updates the code state and caches the code in memory as the user types.
+     *
+     * @param e - The text area change event.
+     */
     const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
         setCode(val);
@@ -248,7 +269,12 @@ export function CodingArena() {
         codeCache.current[cacheKey] = val;
     };
 
-    // Support Tab key indentation inside textarea
+    /**
+     * Intercepts the keydown event to support 4-spaces Tab key indentation
+     * inside the textarea code editor.
+     *
+     * @param e - The keyboard event.
+     */
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Tab') {
             e.preventDefault();
@@ -270,6 +296,10 @@ export function CodingArena() {
         }
     };
 
+    /**
+     * Submits the user's code to the compilation/sandbox execution API,
+     * updates the console/terminal output, and persists the solution state.
+     */
     const handleRunCode = async () => {
         if (loading) return;
         setLoading(true);

@@ -2,6 +2,10 @@ import qaAgent from './adk-agents/qa-agent';
 import { Runner, InMemorySessionService } from '@google/adk';
 import { logger } from './utils/logger';
 
+/**
+ * Entry point for running the QA agent locally inside an ephemeral runner
+ * to test if it correctly picks up the latest study guide and responds.
+ */
 async function main() {
     logger.info('Testing QA Agent...');
     const runner = new Runner({

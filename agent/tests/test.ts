@@ -6,6 +6,10 @@ import { logger } from '../utils/logger';
 process.env.OPENROUTER_API_KEY = 'test-api-key';
 process.env.OPENROUTER_URL = 'https://openrouter.ai';
 
+/**
+ * Runs the unit tests for OpenRouterLlm, validating model regex patterns,
+ * mapping message histories, functions, search tool conversion, and responses.
+ */
 async function runTests() {
     logger.info('Running OpenRouterLlm unit tests...');
 

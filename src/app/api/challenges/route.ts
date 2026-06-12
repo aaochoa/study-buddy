@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { logger } from '@/lib/logger';
 
+/**
+ * Handles GET requests to retrieve all coding challenges solved or in progress
+ * by the currently authenticated user.
+ *
+ * @returns A JSON response containing the list of challenges or an unauthorized/failure error.
+ */
 export async function GET() {
     try {
         const supabase = await createClient();
@@ -33,6 +39,13 @@ export async function GET() {
     }
 }
 
+/**
+ * Handles POST requests to save or update the coding challenge progress/solution
+ * for the currently authenticated user.
+ *
+ * @param request - The incoming HTTP Request containing problemId, language, code, and completion status.
+ * @returns A JSON response with the saved challenge record or an error.
+ */
 export async function POST(request: Request) {
     try {
         const supabase = await createClient();

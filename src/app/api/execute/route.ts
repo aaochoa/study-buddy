@@ -8,6 +8,14 @@ import { logger } from '@/lib/logger';
 
 const execAsync = promisify(exec);
 
+/**
+ * Handles POST requests to compile/execute the user's coding challenge solution,
+ * combining the code with the language's test harness, running it in a sandbox command-line execution,
+ * and returning the test run output and statistics.
+ *
+ * @param req - The incoming request with code, language, and problemId.
+ * @returns A JSON response with execution success status, passed/total tests, output, and errors.
+ */
 export async function POST(req: Request) {
     let tempFile = '';
     let tempBin = '';

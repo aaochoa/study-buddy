@@ -8,7 +8,12 @@ interface ResearchResultProps {
     onClose?: () => void;
 }
 
-/** Minimal markdown → HTML conversion for headers, bold, inline code, lists */
+/**
+ * Minimal markdown → HTML conversion helper for headers, bold, inline code, lists.
+ *
+ * @param md - The raw markdown content.
+ * @returns The converted HTML string.
+ */
 function markdownToHtml(md: string): string {
     // Handle fenced code blocks first (before HTML escaping)
     const codePlaceholders: string[] = [];
@@ -60,16 +65,29 @@ function markdownToHtml(md: string): string {
     return html;
 }
 
+/**
+ * ResearchResult component displays the generated study guide report.
+ * It supports toggle views between preview (HTML rendered) and raw markdown,
+ * and actions to copy the markdown text or download it as a file.
+ *
+ * @param props - Props including report content and optional onClose handler.
+ */
 export function ResearchResult({ report, onClose }: ResearchResultProps) {
     const [copied, setCopied] = useState(false);
     const [view, setView] = useState<'rendered' | 'raw'>('rendered');
 
+    /**
+     * Copies the raw markdown report text to the user's clipboard.
+     */
     const handleCopy = useCallback(async () => {
         await navigator.clipboard.writeText(report);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     }, [report]);
 
+    /**
+     * Downloads the report content as a .md file.
+     */
     const handleDownload = useCallback(() => {
         // Extract a filename from the first heading if present
         const titleMatch = report.match(/^# (.+)$/m);

@@ -4,6 +4,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { logger } from '@/lib/logger';
 
+/**
+ * Handles GET requests to list all study guides for the authenticated user,
+ * syncing any newly created local markdown files into the database.
+ *
+ * @returns A JSON response with the list of user guides or an error.
+ */
 export async function GET() {
     try {
         const supabase = await createClient();
@@ -84,6 +90,13 @@ export async function GET() {
     }
 }
 
+/**
+ * Handles POST requests to save or update the content of a study guide
+ * for the currently authenticated user.
+ *
+ * @param request - The incoming Request containing title, filename, and content.
+ * @returns A JSON response with the saved guide details or an error.
+ */
 export async function POST(request: Request) {
     try {
         const supabase = await createClient();

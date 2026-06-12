@@ -8,6 +8,12 @@ import { logger } from '../utils/logger';
 
 dotenv.config();
 
+/**
+ * Resolves the appropriate model name to use for the QA agent
+ * based on environment variables, defaulting to 'gemini-2.0-flash'.
+ *
+ * @returns The resolved model name.
+ */
 const getModel = () => {
     if (process.env.QA_MODEL) {
         return process.env.QA_MODEL.trim();
@@ -23,7 +29,10 @@ const modelName = getModel();
 const modelInstance = new OpenRouterLlm({ model: modelName });
 
 /**
- * Helper to scan the research directory and read the content of the most recently modified markdown file.
+ * Scans the research directory and reads the content of the most
+ * recently modified markdown file to be used as context for the QA session.
+ *
+ * @returns The contents of the latest guide markdown file, or an empty string.
  */
 const getLatestGuideContent = (): string => {
     const researchDir = path.join(__dirname, '..', 'research');
@@ -53,6 +62,13 @@ const getLatestGuideContent = (): string => {
     }
 };
 
+/**
+ * Callback triggered before model invocation to enforce a maximum LLM call limit (10)
+ * per session to prevent runaway loops.
+ *
+ * @param params - Context containing invocation history and cost manager.
+ * @returns A fallback response object if the limit is reached, or undefined.
+ */
 const limitLlmCallsCallback = async ({ context }: { context: Context }) => {
     const calls = (context.invocationContext as any).invocationCostManager?.numberOfLlmCalls || 0;
     if (calls >= 10) {
