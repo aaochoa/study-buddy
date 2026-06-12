@@ -60,9 +60,13 @@ export function useReportAutoSave({
                         .substring(0, 50);
                     const filename = `${cleanTitle}_${Date.now()}.md`;
 
-                    // Clean the content from any appended download link
-                    const cleanedContent = reportContent.replace(
+                    // Clean the content from any appended download link (markdown or plain text/raw data variants)
+                    let cleanedContent = reportContent.replace(
                         /\n\n\[Click here to download [^\]]+\]\(data:[^)]+\)$/,
+                        '',
+                    );
+                    cleanedContent = cleanedContent.replace(
+                        /\n*(?:Click here to download(?: [^:\n]+)?\s*)?data:[^\s]+$/i,
                         '',
                     );
 

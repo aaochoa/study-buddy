@@ -105,6 +105,37 @@ describe('useReportAutoSave hook', () => {
         });
         const callBody = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
         expect(callBody.title).toBe('Guide Title');
+        expect(callBody.content).toBe('# Guide Title');
+    });
+
+    it('cleans markdown download links before saving', async () => {
+        const mockResearchAgent = {
+            state: {
+                report_result:
+                    '# Guide Title\n\n[Click here to download guide.md](data:application/octet-stream;base64,xyz)',
+            },
+            messages: [],
+        };
+
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+        });
+
+        renderHook(() =>
+            useReportAutoSave({
+                researchAgent: mockResearchAgent,
+                setSelectedReport: mockSetSelectedReport,
+                setSelectedFilename: mockSetSelectedFilename,
+                setRefreshTrigger: mockSetRefreshTrigger,
+            }),
+        );
+
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalled();
+        });
+        const callBody = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+        expect(callBody.title).toBe('Guide Title');
+        expect(callBody.content).toBe('# Guide Title');
     });
 
     it('ignores stale responses if the hook dependencies change before the fetch completes', async () => {
