@@ -8,6 +8,10 @@ if "%GITHUB_ACTIONS%"=="true" (
     echo Skipping agent installation in CI/sandbox environment.
     exit /b 0
 )
+if "%CODESANDBOX_SSE%"=="true" (
+    echo Skipping agent installation in CI/sandbox environment.
+    exit /b 0
+)
 
 REM Navigate to the agent directory
 cd /d "%~dp0\..\agent" || exit /b 1
