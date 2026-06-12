@@ -1,6 +1,29 @@
 import { BaseLlm, LlmRequest, LlmResponse, GOOGLE_SEARCH, LLMRegistry } from '@google/adk';
 import { logger } from './logger';
 
+function redactOrTruncate(value: any): any {
+    if (typeof value === 'string') {
+        return value.length > 100 ? value.substring(0, 100) + '... [truncated]' : value;
+    }
+    if (value && typeof value === 'object') {
+        const result: any = Array.isArray(value) ? [] : {};
+        for (const [key, val] of Object.entries(value)) {
+            if (['content', 'text', 'arguments', 'args'].includes(key)) {
+                result[key] =
+                    typeof val === 'string'
+                        ? val.length > 100
+                            ? val.substring(0, 100) + '... [truncated]'
+                            : val
+                        : '[redacted/truncated object]';
+            } else {
+                result[key] = redactOrTruncate(val);
+            }
+        }
+        return result;
+    }
+    return value;
+}
+
 // Override the processLlmRequest of GOOGLE_SEARCH to prevent it from throwing for non-Gemini models
 const originalProcessLlmRequest = GOOGLE_SEARCH.processLlmRequest;
 GOOGLE_SEARCH.processLlmRequest = async function (params) {
@@ -308,7 +331,7 @@ export class OpenRouterLlm extends BaseLlm {
                     args = JSON.parse(acc.arguments);
                 } catch (e) {
                     logger.error(
-                        { arguments: acc.arguments, err: e },
+                        { arguments: redactOrTruncate(acc.arguments), err: e },
                         'Failed to parse accumulated tool call arguments',
                     );
                 }
@@ -339,7 +362,10 @@ export class OpenRouterLlm extends BaseLlm {
         const message = choice?.message;
 
         if (!message) {
-            logger.error({ responseData: data }, 'OpenRouter full response on failure');
+            logger.error(
+                { responseData: redactOrTruncate(data) },
+                'OpenRouter full response on failure',
+            );
             throw new Error('No message returned from OpenRouter');
         }
 
@@ -357,7 +383,7 @@ export class OpenRouterLlm extends BaseLlm {
                         args = JSON.parse(tc.function.arguments);
                     } catch (e) {
                         logger.error(
-                            { arguments: tc.function.arguments, err: e },
+                            { arguments: redactOrTruncate(tc.function.arguments), err: e },
                             'Failed to parse function arguments',
                         );
                     }
