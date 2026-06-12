@@ -106,4 +106,71 @@ describe('useReportAutoSave hook', () => {
         const callBody = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
         expect(callBody.title).toBe('Guide Title');
     });
+
+    it('ignores stale responses if the hook dependencies change before the fetch completes', async () => {
+        let resolveFirstFetch: (value: any) => void = () => {};
+        let resolveSecondFetch: (value: any) => void = () => {};
+
+        const firstFetchPromise = new Promise((resolve) => {
+            resolveFirstFetch = resolve;
+        });
+        const secondFetchPromise = new Promise((resolve) => {
+            resolveSecondFetch = resolve;
+        });
+
+        (global.fetch as jest.Mock)
+            .mockImplementationOnce(() => firstFetchPromise)
+            .mockImplementationOnce(() => secondFetchPromise);
+
+        const mockResearchAgent = {
+            state: {
+                report_result: '# Version 1',
+            },
+            messages: [],
+        };
+
+        const { rerender } = renderHook(
+            ({ agent }) =>
+                useReportAutoSave({
+                    researchAgent: agent,
+                    setSelectedReport: mockSetSelectedReport,
+                    setSelectedFilename: mockSetSelectedFilename,
+                    setRefreshTrigger: mockSetRefreshTrigger,
+                }),
+            {
+                initialProps: { agent: mockResearchAgent },
+            },
+        );
+
+        // Verify first fetch was triggered
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+
+        // Update the report content to Version 2
+        const updatedAgent = {
+            state: {
+                report_result: '# Version 2',
+            },
+            messages: [],
+        };
+        rerender({ agent: updatedAgent });
+
+        // Verify second fetch was triggered
+        expect(global.fetch).toHaveBeenCalledTimes(2);
+
+        // Resolve the second fetch (which is the latest one)
+        resolveSecondFetch({ ok: true });
+        await waitFor(() => {
+            expect(mockSetSelectedReport).toHaveBeenCalledWith('# Version 2');
+        });
+
+        // Clear mock calls to see if mockSetSelectedReport is called when the first (stale) fetch resolves
+        mockSetSelectedReport.mockClear();
+
+        // Resolve the first fetch (which is stale)
+        resolveFirstFetch({ ok: true });
+
+        // Wait a bit to ensure it doesn't get called
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(mockSetSelectedReport).not.toHaveBeenCalled();
+    });
 });

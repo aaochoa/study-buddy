@@ -19,6 +19,8 @@ export function useReportAutoSave({
     const state = (researchAgent.state ?? {}) as AgentState;
 
     useEffect(() => {
+        let active = true;
+
         const getReportFromMessages = (messages: any[]) => {
             for (let i = messages.length - 1; i >= 0; i--) {
                 const msg = messages[i];
@@ -75,17 +77,24 @@ export function useReportAutoSave({
                     });
 
                     if (response.ok) {
+                        if (!active) return;
                         setLastSavedReport(reportContent);
                         setSelectedReport(cleanedContent);
                         setSelectedFilename(filename);
                         setRefreshTrigger((prev) => prev + 1);
                     }
                 } catch (err) {
-                    logger.error({ err }, 'Failed to auto-save generated guide to DB');
+                    if (active) {
+                        logger.error({ err }, 'Failed to auto-save generated guide to DB');
+                    }
                 }
             };
             saveReport();
         }
+
+        return () => {
+            active = false;
+        };
     }, [
         state.report_result,
         researchAgent.messages,
