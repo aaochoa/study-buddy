@@ -1,4 +1,35 @@
 import { BaseLlm, LlmRequest, LlmResponse, GOOGLE_SEARCH, LLMRegistry } from '@google/adk';
+import { logger } from './logger';
+
+/**
+ * Recursively redacts or truncates object keys and values (like 'content', 'text', 'arguments', 'args')
+ * that might contain user data or heavy model payloads to keep log files safe and compact.
+ *
+ * @param value - The input value to redact/truncate.
+ * @returns The sanitized value.
+ */
+function redactOrTruncate(value: any): any {
+    if (typeof value === 'string') {
+        return value.length > 100 ? value.substring(0, 100) + '... [truncated]' : value;
+    }
+    if (value && typeof value === 'object') {
+        const result: any = Array.isArray(value) ? [] : {};
+        for (const [key, val] of Object.entries(value)) {
+            if (['content', 'text', 'arguments', 'args'].includes(key)) {
+                result[key] =
+                    typeof val === 'string'
+                        ? val.length > 100
+                            ? val.substring(0, 100) + '... [truncated]'
+                            : val
+                        : '[redacted/truncated object]';
+            } else {
+                result[key] = redactOrTruncate(val);
+            }
+        }
+        return result;
+    }
+    return value;
+}
 
 // Override the processLlmRequest of GOOGLE_SEARCH to prevent it from throwing for non-Gemini models
 const originalProcessLlmRequest = GOOGLE_SEARCH.processLlmRequest;
@@ -28,19 +59,42 @@ GOOGLE_SEARCH.processLlmRequest = async function (params) {
     return originalProcessLlmRequest.call(this, params);
 };
 
+/**
+ * OpenRouterLlm class implements a custom BaseLlm provider to integrate OpenRouter
+ * compatible LLMs (like deepseek or mistral) into the Google ADK runner.
+ */
 export class OpenRouterLlm extends BaseLlm {
     // Matches model IDs that have a slash (e.g. google/gemini-2.5-flash) or openrouter/ prefixed ones, and allows gemini- prefix to bypass adk checks
     static supportedModels = [/^(gemini-)?([a-zA-Z0-9\-]+\/[a-zA-Z0-9\-]+.*)$/];
 
+    /**
+     * Creates an instance of OpenRouterLlm.
+     *
+     * @param params - Configuration parameters including the model string.
+     */
     constructor(params: { model: string }) {
         super({ model: params.model });
     }
 
-    // Abstract method implementation. Live WebSocket is not supported by OpenRouter.
+    /**
+     * Sets up a websocket connection.
+     * Note: WebSocket stream is not supported for OpenRouter, so this always throws.
+     *
+     * @param llmRequest - The parameters of the LLM request.
+     * @throws Error indicating websocket is not supported.
+     */
     async connect(llmRequest: LlmRequest): Promise<any> {
         throw new Error('WebSocket connection (connect) is not supported for OpenRouterLlm');
     }
 
+    /**
+     * Sends the chat request to OpenRouter API and yields incremental responses.
+     *
+     * @param llmRequest - The structured request payload parameters.
+     * @param stream - Flag indicating whether to stream the LLM response.
+     * @param abortSignal - Signal to abort the API request.
+     * @returns An async generator yielding structured ADK LlmResponse chunks.
+     */
     async *generateContentAsync(
         llmRequest: LlmRequest,
         stream: boolean = false,
@@ -67,6 +121,14 @@ export class OpenRouterLlm extends BaseLlm {
         }
     }
 
+    /**
+     * Maps the Google ADK Gemini-style contents/messages history structure
+     * into OpenAI-style system, user, assistant, and tool messages list.
+     *
+     * @param contents - The list of contents to map.
+     * @param systemInstruction - Optional system prompt instruction.
+     * @returns A mapped list of OpenAI message objects.
+     */
     private mapMessages(contents: LlmRequest['contents'], systemInstruction?: any): any[] {
         const messages: any[] = [];
 
@@ -128,6 +190,13 @@ export class OpenRouterLlm extends BaseLlm {
         return messages;
     }
 
+    /**
+     * Maps Google ADK Gemini-style function declarations and search tools
+     * to OpenAI-style tools/functions payload.
+     *
+     * @param tools - The ADK tools array.
+     * @returns A mapped list of tool definitions.
+     */
     private mapTools(tools?: any[]): any[] {
         const mappedTools: any[] = [];
         if (tools) {
@@ -155,6 +224,12 @@ export class OpenRouterLlm extends BaseLlm {
         return mappedTools;
     }
 
+    /**
+     * Maps response MIME type configurations to OpenAI response formats (e.g., JSON mode).
+     *
+     * @param responseMimeType - Optional response mime type string.
+     * @returns A response format object or undefined.
+     */
     private mapResponseFormat(responseMimeType?: string): any {
         if (responseMimeType === 'application/json') {
             return { type: 'json_object' };
@@ -162,6 +237,14 @@ export class OpenRouterLlm extends BaseLlm {
         return undefined;
     }
 
+    /**
+     * Builds the final HTTP request URL, headers, and request body payload
+     * needed for querying the OpenRouter completions endpoint.
+     *
+     * @param llmRequest - The incoming ADK request structure.
+     * @param stream - Whether the request will be streamed.
+     * @returns An object containing the target URL, headers, and raw request body.
+     */
     private buildRequestPayload(
         llmRequest: LlmRequest,
         stream: boolean,
@@ -209,6 +292,13 @@ export class OpenRouterLlm extends BaseLlm {
         return { url: `${openrouterUrl}/api/v1/chat/completions`, headers, body: requestBody };
     }
 
+    /**
+     * Handles SSE streaming responses from the OpenRouter API, accumulating
+     * text deltas and tool call increments, yielding them in ADK format.
+     *
+     * @param response - The HTTP Response stream.
+     * @returns An async generator yielding structured ADK LlmResponse chunks.
+     */
     private async *handleStreamResponse(response: Response): AsyncGenerator<LlmResponse, void> {
         if (!response.body) {
             throw new Error('Response body is empty');
@@ -306,9 +396,9 @@ export class OpenRouterLlm extends BaseLlm {
                 try {
                     args = JSON.parse(acc.arguments);
                 } catch (e) {
-                    console.error(
-                        'Failed to parse accumulated tool call arguments:',
-                        acc.arguments,
+                    logger.error(
+                        { arguments: redactOrTruncate(acc.arguments), err: e },
+                        'Failed to parse accumulated tool call arguments',
                     );
                 }
                 finalParts.push({
@@ -332,13 +422,23 @@ export class OpenRouterLlm extends BaseLlm {
         };
     }
 
+    /**
+     * Handles non-streaming responses from the OpenRouter API, mapping the
+     * completions result and any function calls to the ADK LlmResponse format.
+     *
+     * @param response - The HTTP Response.
+     * @returns An async generator yielding a single final ADK LlmResponse.
+     */
     private async *handleSingleResponse(response: Response): AsyncGenerator<LlmResponse, void> {
         const data = await response.json();
         const choice = data.choices?.[0];
         const message = choice?.message;
 
         if (!message) {
-            console.error('OpenRouter full response on failure:', JSON.stringify(data, null, 2));
+            logger.error(
+                { responseData: redactOrTruncate(data) },
+                'OpenRouter full response on failure',
+            );
             throw new Error('No message returned from OpenRouter');
         }
 
@@ -355,7 +455,10 @@ export class OpenRouterLlm extends BaseLlm {
                     try {
                         args = JSON.parse(tc.function.arguments);
                     } catch (e) {
-                        console.error('Failed to parse function arguments:', tc.function.arguments);
+                        logger.error(
+                            { arguments: redactOrTruncate(tc.function.arguments), err: e },
+                            'Failed to parse function arguments',
+                        );
                     }
                     parts.push({
                         functionCall: {

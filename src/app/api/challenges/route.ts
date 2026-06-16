@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { logger } from '@/lib/logger';
 
+/**
+ * Handles GET requests to retrieve all coding challenges solved or in progress
+ * by the currently authenticated user.
+ *
+ * @returns A JSON response containing the list of challenges or an unauthorized/failure error.
+ */
 export async function GET() {
     try {
         const supabase = await createClient();
@@ -27,11 +34,18 @@ export async function GET() {
 
         return NextResponse.json(challenges || []);
     } catch (error: any) {
-        console.error('Failed to list coding challenges from DB:', error);
+        logger.error({ err: error }, 'Failed to list coding challenges from DB');
         return NextResponse.json({ error: 'Failed to list coding challenges' }, { status: 500 });
     }
 }
 
+/**
+ * Handles POST requests to save or update the coding challenge progress/solution
+ * for the currently authenticated user.
+ *
+ * @param request - The incoming HTTP Request containing problemId, language, code, and completion status.
+ * @returns A JSON response with the saved challenge record or an error.
+ */
 export async function POST(request: Request) {
     try {
         const supabase = await createClient();
@@ -76,7 +90,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json(data ? data[0] : null);
     } catch (error: any) {
-        console.error('Failed to save coding challenge to DB:', error);
+        logger.error({ err: error }, 'Failed to save coding challenge to DB');
         return NextResponse.json({ error: 'Failed to save coding challenge' }, { status: 500 });
     }
 }

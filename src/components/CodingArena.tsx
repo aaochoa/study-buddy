@@ -2,10 +2,16 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAgent, useCopilotKit } from '@copilotkit/react-core/v2';
+import { logger } from '@/lib/logger';
 import styles from './CodingArena.module.css';
 import { ProblemSpecPanel, Problem } from './ProblemSpecPanel';
 import { CodeWorkspacePanel } from './CodeWorkspacePanel';
 
+/**
+ * CodingArena component provides an interactive workspace for practicing coding challenges.
+ * It lets the user select a problem, pick a programming language, edit the solution code
+ * with tab indentation, execute the tests in a sandbox, and view output/results in a terminal.
+ */
 export function CodingArena() {
     const [problems, setProblems] = useState<Problem[]>([]);
     const [selectedProblemId, setSelectedProblemId] = useState<string>('');
@@ -29,6 +35,10 @@ export function CodingArena() {
 
     const currentProblem = problems.find((p) => p.id === selectedProblemId) || problems[0];
 
+    /**
+     * Fetches the global list of coding problems from the server-side database
+     * and auto-selects the first available problem if none is currently selected.
+     */
     const fetchProblems = useCallback(async () => {
         try {
             const res = await fetch('/api/problems');
@@ -43,7 +53,7 @@ export function CodingArena() {
                 }
             }
         } catch (err) {
-            console.error('Failed to fetch problems from DB:', err);
+            logger.error({ err }, 'Failed to fetch problems from DB');
         }
     }, []);
 
@@ -65,6 +75,10 @@ export function CodingArena() {
         }
     }, [challengesAgent.isRunning, wasGenerating, fetchProblems]);
 
+    /**
+     * Triggers the challenges agent to generate new coding challenges
+     * to populate the problems database.
+     */
     const handleGenerateNewProblems = async () => {
         if (challengesAgent.isRunning) return;
 
@@ -76,12 +90,16 @@ export function CodingArena() {
             });
             await copilotkit.runAgent({ agent: challengesAgent });
         } catch (err) {
-            console.error('Failed to trigger challenges agent:', err);
+            logger.error({ err }, 'Failed to trigger challenges agent');
         }
     };
 
     // Load solutions from Supabase on mount
     useEffect(() => {
+        /**
+         * Fetches and caches the user's previously saved solutions from the database
+         * to pre-populate their workspace editor.
+         */
         const loadUserSolutions = async () => {
             try {
                 const response = await fetch('/api/challenges');
@@ -95,7 +113,7 @@ export function CodingArena() {
                     });
                 }
             } catch (err) {
-                console.error('Failed to load user solutions from DB:', err);
+                logger.error({ err }, 'Failed to load user solutions from DB');
             } finally {
                 setLoaded(true);
             }
@@ -149,10 +167,10 @@ export function CodingArena() {
                     lastSavedCodeRef.current[cacheKey] = codeToSave;
                 } else {
                     const errData = await response.json();
-                    console.error('Failed to auto-save solution to DB:', errData);
+                    logger.error({ errData }, 'Failed to auto-save solution to DB');
                 }
             } catch (dbErr) {
-                console.error('Failed to auto-save solution to DB:', dbErr);
+                logger.error({ err: dbErr }, 'Failed to auto-save solution to DB');
             }
         }, 1500); // 1.5s debounce
 
@@ -194,7 +212,7 @@ export function CodingArena() {
                         }
                     })
                     .catch((err) =>
-                        console.error('Failed to save previous challenge on switch:', err),
+                        logger.error({ err }, 'Failed to save previous challenge on switch'),
                     );
             }
         }
@@ -234,12 +252,16 @@ export function CodingArena() {
                         code: currentCode,
                         completed: isCompleted,
                     }),
-                }).catch((err) => console.error('Failed to save on unmount:', err));
+                }).catch((err) => logger.error({ err }, 'Failed to save on unmount'));
             }
         };
     }, []);
 
-    // Keep cache updated when user types
+    /**
+     * Updates the code state and caches the code in memory as the user types.
+     *
+     * @param e - The text area change event.
+     */
     const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
         setCode(val);
@@ -247,7 +269,12 @@ export function CodingArena() {
         codeCache.current[cacheKey] = val;
     };
 
-    // Support Tab key indentation inside textarea
+    /**
+     * Intercepts the keydown event to support 4-spaces Tab key indentation
+     * inside the textarea code editor.
+     *
+     * @param e - The keyboard event.
+     */
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Tab') {
             e.preventDefault();
@@ -269,6 +296,10 @@ export function CodingArena() {
         }
     };
 
+    /**
+     * Submits the user's code to the compilation/sandbox execution API,
+     * updates the console/terminal output, and persists the solution state.
+     */
     const handleRunCode = async () => {
         if (loading) return;
         setLoading(true);
@@ -356,10 +387,10 @@ export function CodingArena() {
                     lastSavedCodeRef.current[cacheKey] = code;
                 } else {
                     const errData = await response.json();
-                    console.error('Failed to save solution to DB:', errData);
+                    logger.error({ errData }, 'Failed to save solution to DB');
                 }
             } catch (dbErr) {
-                console.error('Failed to auto-save solution to DB:', dbErr);
+                logger.error({ err: dbErr }, 'Failed to auto-save solution to DB');
             }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);

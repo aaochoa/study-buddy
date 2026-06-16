@@ -4,9 +4,18 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createClient } from '@/utils/supabase/server';
+import { logger } from '@/lib/logger';
 
 const execAsync = promisify(exec);
 
+/**
+ * Handles POST requests to compile/execute the user's coding challenge solution,
+ * combining the code with the language's test harness, running it in a sandbox command-line execution,
+ * and returning the test run output and statistics.
+ *
+ * @param req - The incoming request with code, language, and problemId.
+ * @returns A JSON response with execution success status, passed/total tests, output, and errors.
+ */
 export async function POST(req: Request) {
     let tempFile = '';
     let tempBin = '';
@@ -127,7 +136,7 @@ export async function POST(req: Request) {
             error: stderr.trim(),
         });
     } catch (err: any) {
-        console.error('Execution router error:', err);
+        logger.error({ err }, 'Execution router error');
         return NextResponse.json({ error: err.message || 'Execution error' }, { status: 500 });
     } finally {
         // 6. Clean up temporary files
@@ -139,7 +148,7 @@ export async function POST(req: Request) {
                 fs.unlinkSync(tempBin);
             }
         } catch (cleanupErr) {
-            console.error('Failed to cleanup temp files:', cleanupErr);
+            logger.error({ err: cleanupErr }, 'Failed to cleanup temp files');
         }
     }
 }

@@ -1,19 +1,27 @@
 'use client';
 
-import { ResearchProgress } from '@/components/ResearchProgress';
-import { ResearchResult } from '@/components/ResearchResult';
-import { SavedGuides, GuideFile } from '@/components/SavedGuides';
+import { GuideFile } from '@/components/SavedGuides';
 import {
     CopilotSidebar,
     useConfigureSuggestions,
     useAgent,
     useCopilotKit,
 } from '@copilotkit/react-core/v2';
-import React, { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { logger } from '@/lib/logger';
+
+// ... existing component definition continues below
+
 import { AgentState } from '@/lib/types';
 import { useAgentSelector } from '@/components/CopilotWrapper';
+import { MainContent } from '@/components/MainContent';
 import { CodingArena } from '@/components/CodingArena';
+import { useReportAutoSave } from '@/hooks/useReportAutoSave';
 
+/**
+ * CopilotKitPage component serves as the main interactive page for the Study Buddy application,
+ * integrating CopilotKit agents for research/Q&A, suggestions, and rendering MainContent/CodingArena.
+ */
 export default function CopilotKitPage() {
     const { activeAgentId, setActiveAgentId, currentView } = useAgentSelector();
 
@@ -80,7 +88,6 @@ export default function CopilotKitPage() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [shouldAutoSelect, setShouldAutoSelect] = useState(false);
     const [wasRunning, setWasRunning] = useState(false);
-    const [lastSavedReport, setLastSavedReport] = useState<string>('');
     const [lastSavedChallenges, setLastSavedChallenges] = useState<string>('');
     const [challengesTriggered, setChallengesTriggered] = useState(false);
 
@@ -108,76 +115,13 @@ export default function CopilotKitPage() {
         }
     }, [researchAgent.isRunning, challengesAgent.isRunning, wasRunning]);
 
-    // Automatically save and show report when report generation finishes (if state or messages are updated)
-    useEffect(() => {
-        const getReportFromMessages = (messages: any[]) => {
-            for (let i = messages.length - 1; i >= 0; i--) {
-                const msg = messages[i];
-                if (msg.role === 'assistant' || msg.role === 'agent') {
-                    let content = '';
-                    if (typeof msg.content === 'string') {
-                        content = msg.content;
-                    } else if (Array.isArray(msg.parts)) {
-                        content = msg.parts.map((part: any) => part.text || '').join('');
-                    }
-                    if (
-                        content.includes('#') &&
-                        (content.includes('Click here to download') ||
-                            content.includes('data:application/octet-stream;base64'))
-                    ) {
-                        return content;
-                    }
-                }
-            }
-            return null;
-        };
-
-        const reportFromMessages = getReportFromMessages(researchAgent.messages || []);
-        const reportContent = state.report_result || reportFromMessages;
-
-        if (reportContent && reportContent !== lastSavedReport) {
-            const saveReport = async () => {
-                try {
-                    // Extract title from the first heading in the markdown report
-                    const titleMatch = reportContent.match(/^#\s+(.+)$/m);
-                    const title = titleMatch ? titleMatch[1].trim() : 'Study Guide';
-
-                    // Generate a clean filename from title
-                    const cleanTitle = title
-                        .toLowerCase()
-                        .replace(/[^a-z0-9]+/g, '_')
-                        .substring(0, 50);
-                    const filename = `${cleanTitle}_${Date.now()}.md`;
-
-                    // Clean the content from any appended download link
-                    const cleanedContent = reportContent.replace(
-                        /\n\n\[Click here to download [^\]]+\]\(data:[^)]+\)$/,
-                        '',
-                    );
-
-                    const response = await fetch('/api/guides', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            title,
-                            filename,
-                            content: cleanedContent,
-                        }),
-                    });
-
-                    if (response.ok) {
-                        setLastSavedReport(reportContent);
-                        setSelectedReport(cleanedContent);
-                        setSelectedFilename(filename);
-                        setRefreshTrigger((prev) => prev + 1);
-                    }
-                } catch (err) {
-                    console.error('Failed to auto-save generated guide to DB:', err);
-                }
-            };
-            saveReport();
-        }
-    }, [state.report_result, researchAgent.messages, lastSavedReport]);
+    // Automatically save and show report when report generation finishes
+    useReportAutoSave({
+        researchAgent,
+        setSelectedReport,
+        setSelectedFilename,
+        setRefreshTrigger,
+    });
 
     // Automatically run the challenges agent when the study guide completes
     useEffect(() => {
@@ -188,6 +132,10 @@ export default function CopilotKitPage() {
             !challengesState.code_challenges &&
             !challengesTriggered
         ) {
+            /**
+             * Triggers the independent challenges agent to generate coding problems
+             * based on the newly completed study guide.
+             */
             const runChallenges = async () => {
                 setChallengesTriggered(true);
                 try {
@@ -199,7 +147,7 @@ export default function CopilotKitPage() {
                     });
                     await copilotkit.runAgent({ agent: challengesAgent });
                 } catch (err) {
-                    console.error('Failed to trigger independent challenges agent:', err);
+                    logger.error({ err }, 'Failed to trigger independent challenges agent');
                 }
             };
             runChallenges();
@@ -220,6 +168,12 @@ export default function CopilotKitPage() {
             return;
         }
 
+        /**
+         * Helper function to post diagnostics/logs to the server-side logging endpoint.
+         *
+         * @param level - The log level (e.g. INFO, DEBUG, ERROR).
+         * @param message - The log payload message.
+         */
         const logToServer = (level: string, message: any) => {
             fetch('/api/log', {
                 method: 'POST',
@@ -228,6 +182,13 @@ export default function CopilotKitPage() {
             }).catch(() => {});
         };
 
+        /**
+         * Traverses the messages history in reverse to find the latest
+         * JSON-formatted block containing coding challenges definitions.
+         *
+         * @param messages - The history of messages.
+         * @returns The JSON challenges string if found, or null.
+         */
         const getChallengesFromMessages = (messages: any[]) => {
             for (let i = messages.length - 1; i >= 0; i--) {
                 const msg = messages[i];
@@ -257,7 +218,14 @@ export default function CopilotKitPage() {
         const challengesContent = challengesState.code_challenges || challengesFromMessages;
 
         if (challengesContent && challengesContent !== lastSavedChallenges) {
+            /**
+             * Extracts, cleans, parses, and batch saves the generated challenges JSON
+             * into the database by calling the problems API.
+             */
             const saveChallenges = async () => {
+                /**
+                 * Local logging utility to send progress reports of the save operation to the log endpoint.
+                 */
                 const logToServer = (level: string, message: any) => {
                     fetch('/api/log', {
                         method: 'POST',
@@ -317,13 +285,13 @@ export default function CopilotKitPage() {
                         if (response.ok) {
                             setLastSavedChallenges(challengesContent);
                             logToServer('SUCCESS', 'Successfully saved generated challenges to DB');
-                            console.log('Successfully saved generated challenges to DB');
+                            logger.info('Successfully saved generated challenges to DB');
                         } else {
                             const errData = await response.json();
                             logToServer('ERROR', { type: 'Server Error', data: errData });
-                            console.error(
-                                'Failed to save challenges to DB (Server Error):',
-                                errData,
+                            logger.error(
+                                { errData },
+                                'Failed to save challenges to DB (Server Error)',
                             );
                         }
                     } else {
@@ -335,7 +303,7 @@ export default function CopilotKitPage() {
                         msg: err.message,
                         stack: err.stack,
                     });
-                    console.error('Failed to parse or auto-save generated challenges:', err);
+                    logger.error({ err }, 'Failed to parse or auto-save generated challenges');
                 }
             };
             saveChallenges();
@@ -347,16 +315,31 @@ export default function CopilotKitPage() {
         challengesAgent.isRunning,
     ]);
 
+    /**
+     * Callback invoked to select and display a specific study guide in the dashboard workspace.
+     *
+     * @param content - The markdown content of the guide.
+     * @param filename - The filename of the guide.
+     */
     const handleSelectGuide = useCallback((content: string, filename: string) => {
         setSelectedReport(content);
         setSelectedFilename(filename);
     }, []);
 
+    /**
+     * Callback invoked to clear the current active study guide selection, reverting back to Research Mode.
+     */
     const handleClearGuide = useCallback(() => {
         setSelectedReport(null);
         setSelectedFilename('');
     }, []);
 
+    /**
+     * Callback invoked when the saved guides list finishes loading from the server.
+     * Auto-selects the newest guide if the auto-select flag is true.
+     *
+     * @param guides - List of guide files retrieved.
+     */
     const handleGuidesLoaded = useCallback(
         async (guides: GuideFile[]) => {
             if (shouldAutoSelect && guides.length > 0) {
@@ -370,7 +353,7 @@ export default function CopilotKitPage() {
                         setShouldAutoSelect(false);
                     }
                 } catch (err) {
-                    console.error('Failed to auto-load newest guide:', err);
+                    logger.error({ err }, 'Failed to auto-load newest guide');
                 }
             }
         },
@@ -408,174 +391,5 @@ export default function CopilotKitPage() {
                 <CodingArena />
             )}
         </main>
-    );
-}
-
-interface MainContentProps {
-    selectedReport: string | null;
-    selectedFilename: string;
-    onSelectGuide: (content: string, filename: string) => void;
-    onClearGuide: () => void;
-    refreshTrigger: number;
-    agentRunning: boolean;
-    onGuidesLoaded: (guides: GuideFile[]) => void;
-    activeAgentId: string;
-}
-
-function MainContent({
-    selectedReport,
-    selectedFilename,
-    onSelectGuide,
-    onClearGuide,
-    refreshTrigger,
-    agentRunning,
-    onGuidesLoaded,
-    activeAgentId,
-}: MainContentProps) {
-    return (
-        <div
-            className="min-h-screen flex flex-col justify-center items-center gap-6 py-10 px-4 bg-gradient-to-br transition-colors duration-300"
-            style={{
-                backgroundImage:
-                    'linear-gradient(to bottom right, var(--bg-gradient-from), var(--bg-gradient-via), var(--bg-gradient-to))',
-            }}
-        >
-            {/* Hero heading */}
-            <div className="text-center mb-2">
-                <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-violet-500">
-                    Study Buddy
-                </h1>
-                <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    Ask me to research any topic &mdash; I&apos;ll build you a full interview study
-                    guide.
-                </p>
-            </div>
-
-            {/* Mode Switcher */}
-            <div
-                className="flex backdrop-blur-md p-1 rounded-xl border border-indigo-500/20 shadow-xl max-w-sm w-full mx-auto transition-colors duration-300"
-                style={{ background: 'var(--bg-mode-switcher)' }}
-            >
-                <button
-                    type="button"
-                    onClick={onClearGuide}
-                    className={`flex-1 text-center py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                        activeAgentId === 'study_buddy_agent'
-                            ? 'bg-indigo-600/90 text-white shadow-md shadow-indigo-600/20 font-semibold'
-                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/20'
-                    }`}
-                >
-                    🔍 Research Mode
-                </button>
-                <button
-                    type="button"
-                    disabled={!selectedReport}
-                    className={`flex-1 text-center py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        !selectedReport
-                            ? 'opacity-40 cursor-not-allowed text-slate-500'
-                            : activeAgentId === 'study_buddy_qa'
-                              ? 'bg-indigo-600/90 text-white shadow-md shadow-indigo-600/20 font-semibold cursor-pointer'
-                              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/20 cursor-pointer'
-                    }`}
-                >
-                    💬 Q&A Mode
-                </button>
-            </div>
-
-            {/* Show active research panel if running, otherwise show manually selected guide or placeholders */}
-            {activeAgentId === 'study_buddy_agent' ? (
-                agentRunning ? (
-                    <ResearchProgress />
-                ) : selectedReport ? (
-                    <div className="w-full max-w-3xl flex flex-col gap-4">
-                        <ResearchResult report={selectedReport} onClose={onClearGuide} />
-                    </div>
-                ) : (
-                    <div
-                        className="w-full max-w-2xl p-8 rounded-2xl border border-indigo-500/10 backdrop-blur-md text-center flex flex-col items-center gap-4 shadow-xl transition-colors duration-300"
-                        style={{ background: 'var(--bg-panel)' }}
-                    >
-                        <div className="p-4 bg-indigo-500/5 rounded-full text-indigo-400/80">
-                            <svg
-                                className="w-8 h-8"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3
-                                className="text-lg font-semibold"
-                                style={{ color: 'var(--text-primary)' }}
-                            >
-                                Ready to Research
-                            </h3>
-                            <p
-                                className="mt-2 text-sm max-w-md mx-auto"
-                                style={{ color: 'var(--text-secondary)' }}
-                            >
-                                Enter a topic in the chat sidebar to start web research and build a
-                                comprehensive study guide.
-                            </p>
-                        </div>
-                    </div>
-                )
-            ) : selectedReport ? (
-                <div className="w-full max-w-3xl flex flex-col gap-4">
-                    <ResearchResult report={selectedReport} onClose={onClearGuide} />
-                </div>
-            ) : (
-                <div
-                    className="w-full max-w-2xl p-8 rounded-2xl border border-indigo-500/20 backdrop-blur-md text-center flex flex-col items-center gap-4 shadow-xl transition-colors duration-300"
-                    style={{ background: 'var(--bg-panel)' }}
-                >
-                    <div className="p-4 bg-indigo-500/10 rounded-full text-indigo-400">
-                        <svg
-                            className="w-8 h-8"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3
-                            className="text-lg font-semibold"
-                            style={{ color: 'var(--text-primary)' }}
-                        >
-                            No Study Guide Selected
-                        </h3>
-                        <p
-                            className="mt-2 text-sm max-w-md mx-auto"
-                            style={{ color: 'var(--text-secondary)' }}
-                        >
-                            To start a Q&A session, please research a new topic first or select one
-                            of your previously saved guides below.
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {/* Saved Guides history list */}
-            <SavedGuides
-                onSelectGuide={onSelectGuide}
-                activeFilename={selectedFilename}
-                refreshTrigger={refreshTrigger}
-                onGuidesLoaded={onGuidesLoaded}
-            />
-        </div>
     );
 }

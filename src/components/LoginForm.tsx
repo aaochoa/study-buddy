@@ -4,12 +4,22 @@ import React, { useState, useTransition } from 'react';
 import styles from './LoginForm.module.css';
 import { login, signup } from '@/app/login/actions';
 
+/**
+ * LoginForm component renders the authentication card supporting both sign-in
+ * and sign-up flows using Supabase auth actions.
+ */
 export function LoginForm() {
     const [isSignUp, setIsSignUp] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
 
+    /**
+     * Submits the authentication form data to sign-up or log-in
+     * the user, displaying success/error messages accordingly.
+     *
+     * @param event - The React form submit event.
+     */
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError(null);
@@ -18,7 +28,6 @@ export function LoginForm() {
         const formData = new FormData(event.currentTarget);
 
         startTransition(async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const result = (isSignUp ? await signup(formData) : await login(formData)) as any;
 
             if (result?.error) {

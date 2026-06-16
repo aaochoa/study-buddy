@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { logger } from '@/lib/logger';
 
+/**
+ * Handles GET requests to retrieve the raw markdown content of a specific study guide
+ * file for the authenticated user.
+ *
+ * @param request - The HTTP Request context.
+ * @param context - Context containing route params (including the target filename).
+ * @returns A NextResponse with markdown content, or an unauthorized/not found error.
+ */
 export async function GET(request: Request, { params }: { params: Promise<{ filename: string }> }) {
     try {
         const { filename } = await params;
@@ -34,7 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ file
             },
         });
     } catch (error: any) {
-        console.error('Failed to get guide content from DB:', error);
+        logger.error({ err: error }, 'Failed to get guide content from DB');
         return NextResponse.json({ error: 'Failed to retrieve guide' }, { status: 500 });
     }
 }

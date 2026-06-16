@@ -1,19 +1,24 @@
 import assert from 'assert';
 import { OpenRouterLlm } from '../utils/openrouter-llm';
+import { logger } from '../utils/logger';
 
 // Setup dummy environment variables for test
 process.env.OPENROUTER_API_KEY = 'test-api-key';
 process.env.OPENROUTER_URL = 'https://openrouter.ai';
 
+/**
+ * Runs the unit tests for OpenRouterLlm, validating model regex patterns,
+ * mapping message histories, functions, search tool conversion, and responses.
+ */
 async function runTests() {
-    console.log('Running OpenRouterLlm unit tests...');
+    logger.info('Running OpenRouterLlm unit tests...');
 
     // Test 1: Supported models regex
     assert.ok(OpenRouterLlm.supportedModels[0].test('google/gemini-2.5-flash'));
     assert.ok(OpenRouterLlm.supportedModels[0].test('deepseek/deepseek-chat'));
     assert.ok(OpenRouterLlm.supportedModels[0].test('openai/gpt-4o-mini'));
     assert.ok(!OpenRouterLlm.supportedModels[0].test('gemini-2.0-flash')); // Should not match without slash
-    console.log('✓ Model regex tests passed');
+    logger.info('✓ Model regex tests passed');
 
     // Test 2: generateContentAsync mappings (System instruction, user text, and tools)
     const llm = new OpenRouterLlm({ model: 'google/gemini-2.5-flash' });
@@ -126,7 +131,7 @@ async function runTests() {
         assert.deepStrictEqual(capturedBody.response_format, { type: 'json_object' });
         assert.strictEqual(capturedHeaders['Authorization'], 'Bearer test-api-key');
 
-        console.log('✓ Mapping and non-streaming generateContentAsync tests passed');
+        logger.info('✓ Mapping and non-streaming generateContentAsync tests passed');
     } finally {
         globalThis.fetch = originalFetch;
     }
@@ -203,15 +208,15 @@ async function runTests() {
             },
         ]);
 
-        console.log('✓ Tool call history and tool response mappings passed');
+        logger.info('✓ Tool call history and tool response mappings passed');
     } finally {
         globalThis.fetch = originalFetch;
     }
 
-    console.log('All tests completed successfully!');
+    logger.info('All tests completed successfully!');
 }
 
 runTests().catch((err) => {
-    console.error('Test suite failed:', err);
+    logger.error({ err }, 'Test suite failed');
     process.exit(1);
 });

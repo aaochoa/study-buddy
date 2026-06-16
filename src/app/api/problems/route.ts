@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '@/lib/logger';
 
+/**
+ * Handles GET requests to retrieve the list of all coding problems globally,
+ * seeding them from the local fixtures file if the database table is empty.
+ *
+ * @returns A JSON response with the problems list or an error.
+ */
 export async function GET() {
     try {
         const supabase = await createClient();
@@ -48,12 +55,12 @@ export async function GET() {
                         .select('id, title, difficulty, description, languages');
 
                     if (insertError) {
-                        console.error('Failed to seed default problems to DB:', insertError);
+                        logger.error({ err: insertError }, 'Failed to seed default problems to DB');
                     } else if (insertedProblems) {
                         return NextResponse.json(insertedProblems);
                     }
                 } catch (jsonErr) {
-                    console.error('Error parsing default problems JSON:', jsonErr);
+                    logger.error({ err: jsonErr }, 'Error parsing default problems JSON');
                 }
             }
             return NextResponse.json([]);
@@ -61,11 +68,17 @@ export async function GET() {
 
         return NextResponse.json(dbProblems);
     } catch (error: any) {
-        console.error('Failed to list problems from DB:', error);
+        logger.error({ err: error }, 'Failed to list problems from DB');
         return NextResponse.json({ error: 'Failed to list problems' }, { status: 500 });
     }
 }
 
+/**
+ * Handles POST requests to batch save or update coding problems globally in the system.
+ *
+ * @param request - The incoming Request containing the array of problems to upsert.
+ * @returns A JSON response with the upserted problems records or an error.
+ */
 export async function POST(request: Request) {
     try {
         const supabase = await createClient();
@@ -112,7 +125,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json(data);
     } catch (error: any) {
-        console.error('Failed to save problems to DB:', error);
+        logger.error({ err: error }, 'Failed to save problems to DB');
         return NextResponse.json(
             { error: error.message || 'Failed to save problems' },
             { status: 500 },
