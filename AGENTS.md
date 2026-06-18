@@ -5,6 +5,16 @@ Read this file in full before making any changes to the codebase.
 
 ---
 
+## Agent instructions
+
+- Be concise and to the point
+- Avoid redundant information
+- Avoid redundant loops looking for a answer - this is a waste of tokens
+- Provide context for decisions made and keep it short
+- Do not echo the users request back at them, this is a waste of tokens
+- Do not provide explanations unless the user asks for an explanation
+- Always keep in mind that we are using LLMs and as such, the responses may not be 100% accurate, but we strive to be as accurate as possible
+
 ## Project Overview
 
 **Study Buddy** is a full-stack AI research assistant that takes a topic from the user, performs
