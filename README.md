@@ -35,21 +35,28 @@ Browser (Next.js 16 / React 19)
 src/app/api/copilotkit/[[...slug]]/route.ts ◄───────────────┘
   └── CopilotRuntime (v2)
         ├── A2AAgent: study_buddy_agent (@ag-ui/a2a)
-        │     └── A2AClient → http://localhost:8000
+        │     └── A2AClient → http://localhost:8000/search
         │                          │
         │                   agent/main.ts  (Node / tsx watch)
-        │                     └── SequentialAgent: search_assistant
-        │                           ├── ParallelAgent: researcher
-        │                           │     ├── LlmAgent: architecture_researcher
-        │                           │     ├── LlmAgent: questions_researcher
-        │                           │     ├── LlmAgent: pitfalls_researcher
-        │                           │     └── LlmAgent: challenges_researcher
-        │                           └── LlmAgent: editor
-        │                                 outputKey: report_result
-        │                                 afterCallback: writes .md to research/
+        │                     ├── SequentialAgent: search_assistant (Unified Server)
+        │                     │     ├── ParallelAgent: researcher
+        │                     │     │     ├── LlmAgent: architecture_researcher
+        │                     │     │     ├── LlmAgent: questions_researcher
+        │                     │     │     ├── LlmAgent: pitfalls_researcher
+        │                     │     │     └── LlmAgent: challenges_researcher
+        │                     │     └── LlmAgent: editor
+        │                     │           outputKey: report_result
+        │                     │           afterCallback: writes .md to research/
+        │                     │
+        │                     ├── LlmAgent: study_buddy_challenges (/challenges)
+        │                     │
+        │                     └── LlmAgent: study_buddy_qa (/qa)
         │
-        └── TextMessageA2AAgent: study_buddy_qa (@ag-ui/a2a)
-              └── A2AClient → http://localhost:8001 (Q&A agent server)
+        ├── TextMessageA2AAgent: study_buddy_qa (@ag-ui/a2a)
+        │     └── A2AClient → http://localhost:8000/qa
+        │
+        └── TextMessageA2AAgent: study_buddy_challenges (@ag-ui/a2a)
+              └── A2AClient → http://localhost:8000/challenges
 ```
 
 ### State → UI Phase Mapping
@@ -63,10 +70,11 @@ src/app/api/copilotkit/[[...slug]]/route.ts ◄───────────
 
 ### Agent Mode Switching
 
-| Agent ID            | Mode     | Purpose                                  |
-| ------------------- | -------- | ---------------------------------------- |
-| `study_buddy_agent` | Research | Generates study guides via web research  |
-| `study_buddy_qa`    | Q&A      | Answers follow-up questions about guides |
+| Agent ID                 | Mode       | Purpose                                               |
+| ------------------------ | ---------- | ----------------------------------------------------- |
+| `study_buddy_agent`      | Research   | Generates study guides via web research               |
+| `study_buddy_qa`         | Q&A        | Answers follow-up questions about guides              |
+| `study_buddy_challenges` | Challenges | Generates coding challenges based on generated guides |
 
 ---
 
@@ -81,6 +89,7 @@ src/app/api/copilotkit/[[...slug]]/route.ts ◄───────────
 | Agent protocol  | A2A (Agent-to-Agent) via `@a2a-js/sdk` + `@ag-ui/a2a`                     |
 | Code execution  | Subprocess sandbox (Python, Ruby, C++, JS, TS) with 4s timeout            |
 | LLM provider    | OpenRouter API (custom ADK adapter)                                       |
+| Database & Auth | Supabase (PostgreSQL with Row Level Security)                             |
 | Package manager | pnpm (workspaces)                                                         |
 
 ---
@@ -164,6 +173,7 @@ pnpm install        # installs root deps + runs postinstall for agent/
 ```env
 RESEARCH_MODEL=gemini-openrouter/free,google/gemini-2.5-flash,openai/gpt-4o-mini,deepseek/deepseek-chat
 QA_MODEL=qwen/qwen3-coder:free
+CHALLENGES_MODEL=qwen/qwen3-coder:free # optional fallback
 OPENROUTER_API_KEY=your-openrouter-api-key
 OPENROUTER_URL=https://openrouter.ai
 PORT=8000
@@ -173,12 +183,19 @@ PORT=8000
 >
 > - **Research Agent (`RESEARCH_MODEL`)**: The first model in this list must start with `gemini-` (such as `gemini-openrouter/free` or `google/gemini-2.5-flash`) because the parallel research agents require the `GOOGLE_SEARCH` tool, which is only supported by Google Gemini models in the ADK framework.
 > - **Q&A Agent (`QA_MODEL`)**: Since the Q&A agent does not use any tools, it has no model limitations. You can use any free or specialized model from OpenRouter (e.g. `qwen/qwen3-coder:free` or `google/gemma-4-31b-it:free`) for fast and free chat.
+> - **Challenges Agent (`CHALLENGES_MODEL`)**: Used by the coding challenges generator. If not specified, falls back to the first research model.
 
 **`.env.local`** (Next.js process, at repo root):
 
 ```env
-AGENT_URL=http://localhost:8000
-QA_AGENT_URL=http://localhost:8001
+AGENT_URL=http://localhost:8000/search
+QA_AGENT_URL=http://localhost:8000/qa
+CHALLENGES_AGENT_URL=http://localhost:8000/challenges
+
+# Supabase Configurations
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+
 COPILOTKIT_TELEMETRY_DISABLED=true   # optional
 ```
 
