@@ -1,0 +1,23 @@
+{
+    "version": 1,
+    "skills": {
+        "frontend-design": {
+            "source": "anthropics/skills",
+            "sourceType": "github",
+            "skillPath": "skills/frontend-design/SKILL.md",
+            "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
+        },
+        "nextjs": {
+            "source": "vercel-labs/vercel-plugin",
+            "sourceType": "github",
+            "skillPath": "skills/nextjs/SKILL.md",
+            "computedHash": "d3a48eada4dbae95856d643a0c9c54a38974ee7896a4d34f93aead13d26c343a"
+        },
+        "tailwind-best-practices": {
+            "source": "mastra-ai/mastra",
+            "sourceType": "github",
+            "skillPath": ".claude/skills/tailwind-best-practices/SKILL.md",
+            "computedHash": "7a94bb24f938aec684feaf5d93e862bc3c854d86d7d7d472293be793a2f4bda2"
+        }
+    }
+}

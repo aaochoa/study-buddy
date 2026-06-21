@@ -125,9 +125,34 @@ export default function CopilotKitPage() {
 
     // Automatically run the challenges agent when the study guide completes
     useEffect(() => {
+        const getReportFromMessages = (messages: any[]) => {
+            for (let i = messages.length - 1; i >= 0; i--) {
+                const msg = messages[i];
+                if (msg.role === 'assistant' || msg.role === 'agent') {
+                    let content = '';
+                    if (typeof msg.content === 'string') {
+                        content = msg.content;
+                    } else if (Array.isArray(msg.parts)) {
+                        content = msg.parts.map((part: any) => part.text || '').join('');
+                    }
+                    if (
+                        content.includes('#') &&
+                        (content.includes('Click here to download') ||
+                            content.includes('data:application/octet-stream;base64'))
+                    ) {
+                        return content;
+                    }
+                }
+            }
+            return null;
+        };
+
+        const reportFromMessages = getReportFromMessages(researchAgent.messages || []);
+        const reportContent = state.report_result || reportFromMessages;
+
         if (
             !researchAgent.isRunning &&
-            state.report_result &&
+            reportContent &&
             !challengesAgent.isRunning &&
             !challengesState.code_challenges &&
             !challengesTriggered
@@ -155,6 +180,7 @@ export default function CopilotKitPage() {
     }, [
         researchAgent.isRunning,
         state.report_result,
+        researchAgent.messages,
         challengesAgent.isRunning,
         challengesState.code_challenges,
         challengesTriggered,
