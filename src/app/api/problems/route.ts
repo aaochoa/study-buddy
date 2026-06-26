@@ -93,7 +93,16 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const problems = await request.json();
+        const body = await request.json();
+        let problems: any[] = [];
+        let solutions: any[] = [];
+
+        if (Array.isArray(body)) {
+            problems = body;
+        } else if (body && typeof body === 'object') {
+            problems = body.problems || [];
+            solutions = body.solutions || [];
+        }
 
         if (!Array.isArray(problems) || problems.length === 0) {
             return NextResponse.json({ error: 'Invalid or empty problems array' }, { status: 400 });
@@ -121,6 +130,44 @@ export async function POST(request: Request) {
 
         if (error) {
             throw error;
+        }
+
+        // Save solutions if provided
+        if (solutions && solutions.length > 0) {
+            const problemIds = upsertData.map((p) => p.id);
+
+            // Delete old solutions for these problems
+            const { error: deleteError } = await supabase
+                .from('solutions')
+                .delete()
+                .in('problem_id', problemIds);
+
+            if (deleteError) {
+                logger.error({ err: deleteError }, 'Failed to delete old solutions');
+            } else {
+                const solutionsData = solutions.map((s: any) => {
+                    if (!s.problem_id || !s.proposed_solution || !s.languages || !s.explanation) {
+                        throw new Error(
+                            `Solution is missing required fields: ${JSON.stringify(s)}`,
+                        );
+                    }
+                    return {
+                        problem_id: s.problem_id,
+                        proposed_solution: s.proposed_solution,
+                        languages: s.languages,
+                        explanation: s.explanation,
+                    };
+                });
+
+                const { error: insertSolutionsError } = await supabase
+                    .from('solutions')
+                    .insert(solutionsData);
+
+                if (insertSolutionsError) {
+                    logger.error({ err: insertSolutionsError }, 'Failed to insert solutions');
+                    throw insertSolutionsError;
+                }
+            }
         }
 
         return NextResponse.json(data);

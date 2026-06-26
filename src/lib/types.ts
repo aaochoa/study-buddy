@@ -6,6 +6,7 @@ export type AgentState = {
     pitfalls_result?: string;
     challenges_result?: string;
     report_result?: string;
+    problems_result?: string;
     code_challenges?: string;
 };
 

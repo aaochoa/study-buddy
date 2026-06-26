@@ -36,10 +36,22 @@ create table if not exists public.coding_challenges (
     unique(user_id, problem_id, language)
 );
 
+-- 4. Create the solutions table
+create table if not exists public.solutions (
+    id uuid default gen_random_uuid() primary key,
+    problem_id text references public.problems(id) on delete cascade not null,
+    proposed_solution text not null,
+    languages text[] not null,
+    explanation text not null,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Enable Row Level Security (RLS) for all tables
 alter table public.guides enable row level security;
 alter table public.problems enable row level security;
 alter table public.coding_challenges enable row level security;
+alter table public.solutions enable row level security;
 
 -- RLS Policies for guides table
 create policy "Users can view their own guides"
@@ -94,4 +106,22 @@ create policy "Users can update their own coding challenges"
 create policy "Users can delete their own coding challenges"
     on public.coding_challenges for delete
     using (auth.uid() = user_id);
+
+-- RLS Policies for solutions table (Global table accessible to all authenticated users)
+create policy "Users can view all solutions"
+    on public.solutions for select
+    using (auth.role() = 'authenticated');
+
+create policy "Users can insert solutions"
+    on public.solutions for insert
+    with check (auth.role() = 'authenticated');
+
+create policy "Users can update solutions"
+    on public.solutions for update
+    using (auth.role() = 'authenticated')
+    with check (auth.role() = 'authenticated');
+
+create policy "Users can delete solutions"
+    on public.solutions for delete
+    using (auth.role() = 'authenticated');
 

@@ -89,7 +89,6 @@ export default function CopilotKitPage() {
     const [shouldAutoSelect, setShouldAutoSelect] = useState(false);
     const [wasRunning, setWasRunning] = useState(false);
     const [lastSavedChallenges, setLastSavedChallenges] = useState<string>('');
-    const [challengesTriggered, setChallengesTriggered] = useState(false);
 
     // Sync the active agent based on whether a study guide is selected/loaded
     useEffect(() => {
@@ -106,7 +105,6 @@ export default function CopilotKitPage() {
             setWasRunning(true);
             setSelectedReport(null);
             setSelectedFilename('');
-            setChallengesTriggered(false);
         } else if (wasRunning && !researchAgent.isRunning && !challengesAgent.isRunning) {
             // Agent finished running
             setWasRunning(false);
@@ -122,71 +120,6 @@ export default function CopilotKitPage() {
         setSelectedFilename,
         setRefreshTrigger,
     });
-
-    // Automatically run the challenges agent when the study guide completes
-    useEffect(() => {
-        const getReportFromMessages = (messages: any[]) => {
-            for (let i = messages.length - 1; i >= 0; i--) {
-                const msg = messages[i];
-                if (msg.role === 'assistant' || msg.role === 'agent') {
-                    let content = '';
-                    if (typeof msg.content === 'string') {
-                        content = msg.content;
-                    } else if (Array.isArray(msg.parts)) {
-                        content = msg.parts.map((part: any) => part.text || '').join('');
-                    }
-                    if (
-                        content.includes('#') &&
-                        (content.includes('Click here to download') ||
-                            content.includes('data:application/octet-stream;base64'))
-                    ) {
-                        return content;
-                    }
-                }
-            }
-            return null;
-        };
-
-        const reportFromMessages = getReportFromMessages(researchAgent.messages || []);
-        const reportContent = state.report_result || reportFromMessages;
-
-        if (
-            !researchAgent.isRunning &&
-            reportContent &&
-            !challengesAgent.isRunning &&
-            !challengesState.code_challenges &&
-            !challengesTriggered
-        ) {
-            /**
-             * Triggers the independent challenges agent to generate coding problems
-             * based on the newly completed study guide.
-             */
-            const runChallenges = async () => {
-                setChallengesTriggered(true);
-                try {
-                    challengesAgent.addMessage({
-                        id: crypto.randomUUID(),
-                        role: 'user',
-                        content:
-                            'Generate 3 coding challenges based on the latest researched study guide.',
-                    });
-                    await copilotkit.runAgent({ agent: challengesAgent });
-                } catch (err) {
-                    logger.error({ err }, 'Failed to trigger independent challenges agent');
-                }
-            };
-            runChallenges();
-        }
-    }, [
-        researchAgent.isRunning,
-        state.report_result,
-        researchAgent.messages,
-        challengesAgent.isRunning,
-        challengesState.code_challenges,
-        challengesTriggered,
-        copilotkit,
-        challengesAgent,
-    ]);
 
     // Automatically save generated coding challenges to DB when they are ready
     useEffect(() => {

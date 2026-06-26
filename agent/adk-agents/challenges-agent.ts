@@ -1,8 +1,8 @@
-import { LlmAgent } from '@google/adk';
+import { LlmAgent, SequentialAgent } from '@google/adk';
 import * as fs from 'fs';
 import * as path from 'path';
 import dotenv from 'dotenv';
-import { challengesCreatorInstruction } from '../utils/prompts';
+import { problemsCreatorInstruction, solutionsCreatorInstruction } from '../utils/prompts';
 import { OpenRouterLlm } from '../utils/openrouter-llm';
 
 dotenv.config();
@@ -21,18 +21,36 @@ const getModel = () => {
 const modelName = getModel();
 const modelInstance = new OpenRouterLlm({ model: modelName });
 
-const challengesAgent = new LlmAgent({
-    name: 'study_buddy_challenges',
-    description: 'Generates 3 well-explained programming challenges (1 easy, 1 medium, 1 hard).',
+const problemsAgent = new LlmAgent({
+    name: 'study_buddy_problems_creator',
+    description:
+        'Generates 3 well-explained programming challenges (1 easy, 1 medium, 1 hard) without solutions.',
     model: modelInstance,
-    instruction: challengesCreatorInstruction,
-    // We intentionally omit outputKey so the agent always generates a fresh response
-    // instead of short-circuiting when the state is already populated.
+    instruction: problemsCreatorInstruction,
+    outputKey: 'problems_result',
+    generateContentConfig: {
+        maxOutputTokens: 6000,
+        temperature: 0.3,
+    },
+});
+
+const solutionsAgent = new LlmAgent({
+    name: 'study_buddy_solutions_creator',
+    description:
+        'Generates functional solutions and code explanations for each of the generated problems.',
+    model: modelInstance,
+    instruction: solutionsCreatorInstruction,
+    outputKey: 'code_challenges',
     generateContentConfig: {
         maxOutputTokens: 8000,
-        temperature: 0.3,
-        // responseMimeType: 'application/json',
+        temperature: 0.2,
     },
+});
+
+const challengesAgent = new SequentialAgent({
+    name: 'study_buddy_challenges',
+    description: 'Generates 3 algorithmic coding challenges and their solutions sequentially.',
+    subAgents: [problemsAgent, solutionsAgent],
 });
 
 export default challengesAgent;

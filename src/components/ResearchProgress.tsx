@@ -35,17 +35,14 @@ export function ResearchProgress() {
             });
 
         if (hasFinalReport) {
-            return challengesAgent.isRunning || !challengesState.code_challenges
-                ? 'challenges'
-                : 'done';
+            return 'done';
         }
 
         if (
             state.search_result ||
             state.architecture_result ||
             state.questions_result ||
-            state.pitfalls_result ||
-            state.challenges_result
+            state.pitfalls_result
         ) {
             return 'editing';
         }
@@ -64,12 +61,9 @@ export function ResearchProgress() {
         state.architecture_result,
         state.questions_result,
         state.pitfalls_result,
-        state.challenges_result,
         state.report_result,
         researchAgent.messages,
         researchAgent.isRunning,
-        challengesAgent.isRunning,
-        challengesState.code_challenges,
     ]);
 
     const combinedSearchResult = useMemo(() => {
@@ -78,7 +72,6 @@ export function ResearchProgress() {
         if (state.architecture_result) parts.push(`[Architecture]\n${state.architecture_result}`);
         if (state.questions_result) parts.push(`[Questions]\n${state.questions_result}`);
         if (state.pitfalls_result) parts.push(`[Pitfalls]\n${state.pitfalls_result}`);
-        if (state.challenges_result) parts.push(`[Challenges]\n${state.challenges_result}`);
         if (parts.length > 0) return parts.join('\n\n');
 
         // Fallback: If editing and we are streaming the report, show current streamed content
@@ -101,7 +94,6 @@ export function ResearchProgress() {
         state.architecture_result,
         state.questions_result,
         state.pitfalls_result,
-        state.challenges_result,
         researchAgent.messages,
     ]);
 

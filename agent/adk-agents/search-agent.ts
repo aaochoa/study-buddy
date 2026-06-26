@@ -7,7 +7,6 @@ import {
     architectureResearcherInstruction,
     questionsResearcherInstruction,
     pitfallsResearcherInstruction,
-    challengesResearcherInstruction,
 } from '../utils/prompts';
 import { getFilename } from '../utils/file-definition';
 import { OpenRouterLlm } from '../utils/openrouter-llm';
@@ -122,24 +121,10 @@ const pitfallsAgent = new LlmAgent({
     },
 });
 
-const challengesAgent = new LlmAgent({
-    name: 'challenges_researcher',
-    description: 'Researches coding challenges and design scenarios.',
-    model: modelInstance,
-    instruction: challengesResearcherInstruction,
-    tools: [GOOGLE_SEARCH],
-    outputKey: 'challenges_result',
-    beforeModelCallback: limitLlmCallsCallback,
-    generateContentConfig: {
-        maxOutputTokens: 2500,
-        temperature: 0.2,
-    },
-});
-
 const researchAgent = new ParallelAgent({
     name: 'researcher',
     description: 'Performs parallel research across multiple domains.',
-    subAgents: [architectureAgent, questionsAgent, pitfallsAgent, challengesAgent],
+    subAgents: [architectureAgent, questionsAgent, pitfallsAgent],
 });
 
 const reportAgent = new LlmAgent({
@@ -151,7 +136,6 @@ const reportAgent = new LlmAgent({
         architectureAgent.outputKey || '',
         questionsAgent.outputKey || '',
         pitfallsAgent.outputKey || '',
-        challengesAgent.outputKey || '',
     ),
     outputKey: 'report_result',
     afterAgentCallback: reportAgentCallback,

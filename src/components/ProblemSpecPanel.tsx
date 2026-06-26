@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './CodingArena.module.css';
 
 export interface LanguageConfig {
     template: string;
     harness: string;
+    solution?: string;
 }
 
 export interface Problem {
@@ -35,6 +36,9 @@ export function ProblemSpecPanel({
     isGenerating,
     onGenerateNew,
 }: ProblemSpecPanelProps) {
+    const [activeTab, setActiveTab] = useState<'description' | 'solution'>('description');
+    const [copied, setCopied] = useState(false);
+
     const getDifficultyClass = (diff: string) => {
         switch (diff.toLowerCase()) {
             case 'easy':
@@ -45,6 +49,16 @@ export function ProblemSpecPanel({
                 return styles.hard;
             default:
                 return '';
+        }
+    };
+
+    const handleCopy = () => {
+        const solutionCode = currentProblem?.languages?.[selectedLanguage]?.solution;
+        if (solutionCode) {
+            navigator.clipboard.writeText(solutionCode).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            });
         }
     };
 
@@ -159,9 +173,70 @@ export function ProblemSpecPanel({
                         >
                             {currentProblem.title}
                         </h2>
-                        <div className={styles.problemDesc}>
-                            {formatDescription(currentProblem.description)}
+
+                        <div className={styles.tabsContainer}>
+                            <button
+                                type="button"
+                                className={[
+                                    styles.tabButton,
+                                    activeTab === 'description' ? styles.activeTabButton : '',
+                                ].join(' ')}
+                                onClick={() => setActiveTab('description')}
+                            >
+                                📖 Description
+                            </button>
+                            <button
+                                type="button"
+                                className={[
+                                    styles.tabButton,
+                                    activeTab === 'solution' ? styles.activeTabButton : '',
+                                ].join(' ')}
+                                onClick={() => setActiveTab('solution')}
+                            >
+                                💡 Proposed Solution
+                            </button>
                         </div>
+
+                        {activeTab === 'description' ? (
+                            <div className={styles.problemDesc}>
+                                {formatDescription(currentProblem.description)}
+                            </div>
+                        ) : (
+                            <div className={styles.solutionWrapper}>
+                                {currentProblem.languages[selectedLanguage]?.solution ? (
+                                    <div style={{ position: 'relative' }}>
+                                        <button
+                                            type="button"
+                                            onClick={handleCopy}
+                                            className={styles.copyBtn}
+                                            aria-label="Copy solution code"
+                                        >
+                                            {copied ? '✅ Copied!' : '📋 Copy'}
+                                        </button>
+                                        <pre className={styles.solutionPre}>
+                                            <code>
+                                                {
+                                                    currentProblem.languages[selectedLanguage]
+                                                        .solution
+                                                }
+                                            </code>
+                                        </pre>
+                                    </div>
+                                ) : (
+                                    <p
+                                        className="text-sm font-medium py-4 text-center"
+                                        style={{ color: 'var(--text-muted)' }}
+                                    >
+                                        No proposed solution available for{' '}
+                                        {selectedLanguage === 'cpp'
+                                            ? 'C++'
+                                            : selectedLanguage.charAt(0).toUpperCase() +
+                                              selectedLanguage.slice(1)}{' '}
+                                        yet.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

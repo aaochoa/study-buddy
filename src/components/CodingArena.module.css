@@ -317,3 +317,85 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+.tabsContainer {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 8px;
+}
+
+.tabButton {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tabButton:hover {
+    color: var(--text-primary);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.activeTabButton {
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.25);
+}
+
+.solutionWrapper {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.solutionPre {
+    background: var(--bg-code-block);
+    border: 1px solid var(--border-code-block);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    color: var(--text-code-block);
+    margin: 0;
+}
+
+.copyBtn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(15, 15, 30, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.copyBtn:hover {
+    color: var(--text-primary);
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(139, 92, 246, 0.4);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
