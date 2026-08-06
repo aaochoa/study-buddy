@@ -80,17 +80,17 @@ src/app/api/copilotkit/[[...slug]]/route.ts ◄───────────
 
 ## 🛠️ Tech Stack
 
-| Layer           | Technology                                                                |
-| --------------- | ------------------------------------------------------------------------- |
-| Frontend        | Next.js 16 (App Router, Turbopack), React 19, TailwindCSS v4              |
-| AI UI bridge    | CopilotKit v2 (`@copilotkit/react-core/v2`)                               |
-| Backend runtime | CopilotKit Runtime v2 (`@copilotkit/runtime/v2`) via Hono + `hono/vercel` |
-| Agent framework | Google ADK (`@google/adk` v1) — TypeScript                                |
-| Agent protocol  | A2A (Agent-to-Agent) via `@a2a-js/sdk` + `@ag-ui/a2a`                     |
-| Code execution  | Subprocess sandbox (Python, Ruby, C++, JS, TS) with 4s timeout            |
-| LLM provider    | OpenRouter API (custom ADK adapter)                                       |
-| Database & Auth | Supabase (PostgreSQL with Row Level Security)                             |
-| Package manager | pnpm (workspaces)                                                         |
+| Layer           | Technology                                                                   |
+| --------------- | ---------------------------------------------------------------------------- |
+| Frontend        | Next.js 16 (App Router, Turbopack), React 19, TailwindCSS v4                 |
+| AI UI bridge    | CopilotKit v2 (`@copilotkit/react-core/v2`)                                  |
+| Backend runtime | CopilotKit Runtime v2 (`@copilotkit/runtime/v2`) via Hono + `hono/vercel`    |
+| Agent framework | Google ADK (`@google/adk` TypeScript & Python `google-adk`)                  |
+| Agent protocol  | A2A (Agent-to-Agent) via `@a2a-js/sdk` + `@ag-ui/a2a` / Python Starlette A2A |
+| Code execution  | Subprocess sandbox (Python, Ruby, C++, JS, TS) with 4s timeout               |
+| LLM provider    | OpenRouter API (custom ADK adapter)                                          |
+| Database & Auth | Supabase (PostgreSQL with Row Level Security)                                |
+| Package manager | pnpm (workspaces)                                                            |
 
 ---
 
@@ -98,7 +98,7 @@ src/app/api/copilotkit/[[...slug]]/route.ts ◄───────────
 
 ```
 study-buddy/
-├── agent/                        # ADK agent server (separate Node process)
+├── agent/                        # TS ADK agent server (Node.js process)
 │   ├── main.ts                   # SequentialAgent definition + A2A server startup
 │   ├── utils/
 │   │   ├── prompts.ts            # System prompts for researcher, editor & Q&A agents
@@ -106,6 +106,12 @@ study-buddy/
 │   │   └── openrouter-llm.ts     # Custom OpenRouter LLM adapter for ADK
 │   ├── .env                      # Agent secrets (gitignored — never commit)
 │   └── package.json
+│
+├── agent_python/                 # Python ADK agent server (Starlette + Uvicorn)
+│   ├── main.py                   # Combined Starlette A2A application entrypoint
+│   ├── adk_agents/               # Python ADK search, qa, and challenges agent modules
+│   ├── utils/                    # Prompts, logger, and OpenRouter LLM helper
+│   └── requirements.txt
 │
 ├── research/                     # Generated markdown study guides (gitignored)
 │
@@ -138,7 +144,9 @@ study-buddy/
 │   └── lib/
 │       └── types.ts              # AgentState, ResearchPhase types
 │
-├── Dockerfile                    # Multi-stage production build
+├── Dockerfile                    # Multi-stage production build (UI + TS Agent)
+├── docker/
+│   └── Dockerfile.agent-python   # Production Docker build for Python ADK agent
 ├── docker-compose.test.yml       # Integration test stack
 ├── entrypoint.sh                 # Production entrypoint
 ├── fixtures/                     # Test fixture data
@@ -218,16 +226,18 @@ The agent reloads automatically on file changes via `tsx watch`.
 
 ## 💻 Available Scripts
 
-| Command           | Description                       |
-| ----------------- | --------------------------------- |
-| `pn dev`          | Start UI + agent concurrently     |
-| `pn dev:ui`       | Start Next.js UI only             |
-| `pn dev:agent`    | Start ADK agent only              |
-| `pn dev:debug`    | Full stack with `LOG_LEVEL=debug` |
-| `pn build`        | Production Next.js build          |
-| `pn format`       | Prettier format all files         |
-| `pn format:check` | Check formatting (CI)             |
-| `pn test`         | Run Jest unit tests               |
+| Command           | Description                          |
+| ----------------- | ------------------------------------ |
+| `pn dev`          | Start UI + TS agent concurrently     |
+| `pn dev:py`       | Start UI + Python agent concurrently |
+| `pn dev:ui`       | Start Next.js UI only                |
+| `pn dev:agent`    | Start TS ADK agent only              |
+| `pn dev:agent:py` | Start Python ADK agent only          |
+| `pn dev:debug`    | Full stack with `LOG_LEVEL=debug`    |
+| `pn build`        | Production Next.js build             |
+| `pn format`       | Prettier format all files            |
+| `pn format:check` | Check formatting (CI)                |
+| `pn test`         | Run Jest unit tests                  |
 
 ---
 
