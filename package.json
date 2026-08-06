@@ -18,7 +18,8 @@
         "format:check": "prettier --check .",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
-        "test": "jest"
+        "test": "jest",
+        "test:py": "cd agent_python && .venv/bin/python -m unittest discover -s tests"
     },
     "dependencies": {
         "@a2a-js/sdk": "^0.2.2",

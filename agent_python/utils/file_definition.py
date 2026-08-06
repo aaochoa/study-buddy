@@ -22,7 +22,7 @@ def get_filename(callback_context: Any) -> str:
     # Clean up the prompt to make it a friendly filename
     stop_words = r"\b(research|study|guide|prepare|for|about|on|can|you|please|me|a|an|the|write|create|generate|make)\b"
     topic = re.sub(stop_words, "", user_prompt, flags=re.IGNORECASE)
-    topic = re.sub(r"[^a-zA-Z0-9\s-_]", "", topic).strip()
+    topic = re.sub(r"[^a-zA-Z0-9\s_\-]", "", topic).strip()
     topic = re.sub(r"\s+", "_", topic).lower()
 
     if not topic:
