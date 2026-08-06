@@ -81,3 +81,17 @@ coverage/
 agent/research
 scratch/
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+agent_python/*.md
+agent_python/research
