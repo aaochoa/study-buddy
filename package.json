@@ -4,8 +4,10 @@
     "private": true,
     "scripts": {
         "dev": "concurrently \"npm run dev:ui\" \"npm run dev:agent\" --names ui,agent --prefix-colors blue,green --kill-others",
+        "dev:py": "concurrently \"npm run dev:ui\" \"npm run dev:agent:py\" --names ui,agent-py --prefix-colors blue,magenta --kill-others",
         "dev:debug": "LOG_LEVEL=debug npm run dev",
         "dev:agent": "./scripts/run-agent.sh || \"scripts\\run-agent.bat\"",
+        "dev:agent:py": "cd agent_python && .venv/bin/python main.py",
         "dev:ui": "next dev --turbopack",
         "build": "next build",
         "start": "next start",
